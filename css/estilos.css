@@ -1,0 +1,503 @@
+/* ============================================================
+   Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco
+   Hoja de estilos única. Mobile-first (base = 360px).
+   Puntos de quiebre: 768px (tablet), 1024px (escritorio).
+   Ver Spec-Driven-Development.md, sección 5, para el porqué de
+   cada token.
+   ============================================================ */
+
+/* ---------- 1. Tokens de diseño (sección 5.1 / 5.2 / 5.3) ---------- */
+:root {
+  /* Color — punto de partida; se espera que cambie con el logo definitivo (D-11) */
+  --color-fondo: #F5EFE6;
+  --color-superficie: #FFFFFF;
+  --color-texto: #2C2C2C;
+  --color-texto-suave: #5A5A5A;
+  --color-acento: #0F6E6E;
+  --color-acento-oscuro: #0B5252;
+  --color-whatsapp: #25D366;
+  --color-whatsapp-oscuro: #1DA851;
+  --color-overlay: rgba(0, 0, 0, .45);
+  --color-borde: rgba(15, 110, 110, .18);
+
+  /* Tipografía */
+  --fuente-titulos: 'Poppins', system-ui, -apple-system, sans-serif;
+  --fuente-texto: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Espaciado — múltiplos de 8px */
+  --espacio-1: .5rem;
+  --espacio-2: 1rem;
+  --espacio-3: 1.5rem;
+  --espacio-4: 2rem;
+  --espacio-5: 3rem;
+  --espacio-6: 4rem;
+  --espacio-7: 5rem;
+  --espacio-8: 6rem;
+
+  --radio: 12px;
+  --sombra: 0 10px 30px rgba(44, 44, 44, .10);
+  --sombra-suave: 0 2px 10px rgba(44, 44, 44, .08);
+
+  /* Altura del header en escritorio, usada para el scroll-margin de anclas */
+  --alto-header: 76px;
+
+  /* Alto de la barra fija de contacto en móvil */
+  --alto-barra-fija: 60px;
+}
+
+/* ---------- 2. Reinicio mínimo ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--fuente-texto);
+  line-height: 1.6;
+  font-size: 16px;
+  padding-bottom: calc(var(--alto-barra-fija) + env(safe-area-inset-bottom, 0px));
+}
+img { max-width: 100%; display: block; }
+ul { list-style: none; margin: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { font-family: var(--fuente-titulos); line-height: 1.2; margin: 0; }
+p { margin: 0 0 var(--espacio-2); }
+button { font: inherit; border: none; background: none; cursor: pointer; }
+
+@media (min-width: 1024px) {
+  body { padding-bottom: 0; }
+}
+
+/* Movimiento reducido: se anula toda animación/transición y el scroll suave */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.contenedor {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--espacio-3);
+}
+
+/* Enlace de salto, oculto hasta recibir foco (accesibilidad de teclado) */
+.salto-contenido {
+  position: absolute;
+  left: var(--espacio-2);
+  top: -100px;
+  background: var(--color-superficie);
+  color: var(--color-acento-oscuro);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  z-index: 200;
+  transition: top .2s ease;
+  font-weight: 600;
+}
+.salto-contenido:focus { top: var(--espacio-2); }
+
+/* Foco visible consistente en toda la página */
+a:focus-visible, button:focus-visible {
+  outline: 3px solid var(--color-acento-oscuro);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Secciones ancladas: que el header fijo de escritorio no las tape */
+section[id], footer[id] { scroll-margin-top: var(--espacio-3); }
+@media (min-width: 1024px) {
+  section[id], footer[id] { scroll-margin-top: calc(var(--alto-header) + var(--espacio-2)); }
+}
+
+.seccion__intro {
+  max-width: 60ch;
+  color: var(--color-texto-suave);
+  font-size: 1.05rem;
+}
+
+h2 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin-bottom: var(--espacio-2); }
+h3 { font-size: clamp(1.15rem, 2.5vw, 1.35rem); margin-bottom: var(--espacio-1); }
+
+section { padding: var(--espacio-7) 0; }
+
+/* ---------- 3. Botones ---------- */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-1);
+  min-height: 44px;
+  padding: .85rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease;
+  white-space: nowrap;
+}
+.boton svg { width: 1.2em; height: 1.2em; flex-shrink: 0; }
+.boton:hover { transform: translateY(-2px); }
+
+.boton--acento { background: var(--color-acento); color: var(--color-superficie); }
+.boton--acento:hover { background: var(--color-acento-oscuro); }
+
+.boton--whatsapp { background: var(--color-whatsapp); color: var(--color-superficie); }
+.boton--whatsapp:hover { background: var(--color-whatsapp-oscuro); }
+
+.boton--fantasma {
+  background: transparent;
+  color: var(--color-acento-oscuro);
+  border: 2px solid var(--color-borde);
+}
+.boton--fantasma:hover { background: rgba(15, 110, 110, .08); }
+
+.boton--grande { padding: 1.1rem 2.2rem; font-size: 1.1rem; box-shadow: var(--sombra); }
+
+/* ---------- 4. Header ---------- */
+.encabezado {
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-suave);
+  position: relative;
+  z-index: 100;
+}
+.encabezado__contenedor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  padding-top: var(--espacio-2);
+  padding-bottom: var(--espacio-2);
+}
+.encabezado__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-1);
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: .9rem;
+  line-height: 1.25;
+  color: var(--color-texto);
+}
+.encabezado__logo img { width: 40px; height: 40px; border-radius: 50%; }
+.encabezado__logo strong { color: var(--color-acento-oscuro); }
+
+.encabezado__nav { display: none; }
+
+.encabezado__telefono { display: none; }
+
+.encabezado__llamar-movil {
+  padding: .6rem 1.1rem;
+  font-size: .9rem;
+}
+
+@media (min-width: 1024px) {
+  .encabezado { position: sticky; top: 0; }
+  .encabezado__contenedor { min-height: var(--alto-header); }
+  .encabezado__nav { display: block; }
+  .encabezado__nav ul { display: flex; gap: var(--espacio-4); }
+  .encabezado__nav a {
+    font-weight: 500;
+    color: var(--color-texto);
+    padding: .5rem 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .encabezado__nav a:hover { color: var(--color-acento-oscuro); border-color: var(--color-acento); }
+  .encabezado__telefono {
+    display: inline-flex;
+    padding: .55rem 1.1rem;
+    font-size: .95rem;
+  }
+  .encabezado__llamar-movil { display: none; }
+}
+
+/* ---------- 5. Hero ---------- */
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: var(--color-superficie);
+}
+.hero__slider {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.hero__slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.hero__slide.is-activa { opacity: 1; }
+/* Sin JS o con una sola imagen: la primera queda fija y visible */
+.hero__slide:first-child { opacity: 1; }
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, var(--color-overlay) 55%, rgba(0,0,0,.6) 100%);
+}
+.hero__contenido {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding-top: var(--espacio-7);
+  padding-bottom: var(--espacio-7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+.hero__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.7);
+}
+.hero__titulo {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: rgba(255,255,255,.85);
+  text-transform: uppercase;
+  max-width: 40ch;
+}
+.hero__eslogan {
+  font-family: var(--fuente-titulos);
+  font-weight: 700;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  line-height: 1.15;
+  max-width: 16ch;
+  margin: 0;
+  text-shadow: 0 2px 18px rgba(0,0,0,.35);
+}
+.hero__telefono {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-superficie);
+  padding: .3rem .6rem;
+}
+.hero__telefono svg { width: 1.1em; height: 1.1em; }
+.hero__horario {
+  font-size: .9rem;
+  color: rgba(255,255,255,.85);
+  margin: 0;
+}
+.hero__puntos {
+  position: absolute;
+  bottom: var(--espacio-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  gap: .5rem;
+}
+.hero__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.45);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color .2s ease, transform .2s ease;
+}
+.hero__punto.is-activo { background: var(--color-superficie); transform: scale(1.2); }
+
+@media (min-width: 768px) {
+  .hero__eslogan { max-width: 22ch; }
+}
+
+/* ---------- 6. Servicios ---------- */
+.servicios__rejilla {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-4);
+}
+@media (min-width: 768px) {
+  .servicios__rejilla { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .servicios__rejilla { grid-template-columns: repeat(3, 1fr); }
+}
+.servicios__tarjeta {
+  background: var(--color-superficie);
+  border-radius: var(--radio);
+  padding: var(--espacio-4);
+  box-shadow: var(--sombra-suave);
+  text-align: left;
+}
+.servicios__icono {
+  width: 48px;
+  height: 48px;
+  color: var(--color-acento);
+  margin-bottom: var(--espacio-2);
+}
+.servicios__tarjeta p { color: var(--color-texto-suave); margin: 0; }
+
+/* ---------- 7. Sobre el doctor ---------- */
+.doctor__grid {
+  display: grid;
+  gap: var(--espacio-4);
+  align-items: center;
+}
+.doctor__foto {
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  width: 100%;
+  /* height:auto explícito: sin esto, el atributo HTML height="1000" de la
+     etiqueta <img> gana la cascada frente a aspect-ratio (no hay ninguna
+     otra regla de "height" con la que competir) y la imagen se estira a
+     1000px reales en vez de calcularse por la proporción 4:5. */
+  height: auto;
+}
+.doctor__credencial {
+  color: var(--color-acento-oscuro);
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .doctor__grid { grid-template-columns: 320px 1fr; }
+}
+
+/* ---------- 8. Galería ---------- */
+.galeria__rejilla {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-4);
+}
+.galeria__rejilla img {
+  border-radius: var(--radio);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  width: 100%;
+  height: auto; /* ver nota en .doctor__foto: evita que el atributo HTML height gane la cascada */
+}
+@media (min-width: 1024px) {
+  .galeria__rejilla { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- 9. Reseñas (plantilla; sección oculta hasta tener datos reales) ---------- */
+.resenas__rejilla {
+  display: grid;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-4);
+}
+@media (min-width: 768px) {
+  .resenas__rejilla { grid-template-columns: repeat(3, 1fr); }
+}
+.resenas__tarjeta {
+  background: var(--color-superficie);
+  border-radius: var(--radio);
+  padding: var(--espacio-3);
+  box-shadow: var(--sombra-suave);
+}
+.resenas__estrellas { color: #E8A93A; letter-spacing: .1em; }
+.resenas__ver-todas { display: inline-block; margin-top: var(--espacio-3); font-weight: 600; color: var(--color-acento-oscuro); }
+
+/* ---------- 10. Footer / ubicación ---------- */
+.pie {
+  background: var(--color-superficie);
+  padding-top: var(--espacio-7);
+}
+.pie__grid {
+  display: grid;
+  gap: var(--espacio-4);
+}
+.pie__mapa a { display: block; border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra-suave); }
+.pie__mapa img { aspect-ratio: 2 / 1; object-fit: cover; width: 100%; height: auto; }
+.pie__info h2 { margin-bottom: var(--espacio-2); }
+.pie__info h3 { margin-top: var(--espacio-3); }
+.pie__horario li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--color-borde);
+  font-size: .95rem;
+}
+.pie__telefono {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-weight: 600;
+  color: var(--color-acento-oscuro);
+  margin-top: var(--espacio-3);
+}
+.pie__acciones { display: flex; flex-wrap: wrap; gap: var(--espacio-2); margin-top: var(--espacio-3); }
+.pie__derechos {
+  text-align: center;
+  font-size: .85rem;
+  color: var(--color-texto-suave);
+  padding: var(--espacio-4) var(--espacio-3);
+  margin-top: var(--espacio-6);
+  border-top: 1px solid var(--color-borde);
+}
+@media (min-width: 768px) {
+  .pie__grid { grid-template-columns: 1.1fr 1fr; align-items: start; }
+}
+
+/* ---------- 11. Elementos fijos de contacto (sección 4.8) ---------- */
+.barra-fija {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: var(--alto-barra-fija);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -4px 16px rgba(0,0,0,.12);
+}
+.barra-fija__boton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  font-weight: 600;
+  color: var(--color-superficie);
+}
+.barra-fija__boton svg { width: 1.2em; height: 1.2em; }
+.barra-fija__boton--llamar { background: var(--color-acento); }
+.barra-fija__boton--whatsapp { background: var(--color-whatsapp); }
+
+.whatsapp-flotante {
+  display: none;
+  position: fixed;
+  bottom: var(--espacio-3);
+  right: var(--espacio-3);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--color-whatsapp);
+  color: var(--color-superficie);
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--sombra);
+  z-index: 150;
+  transition: transform .15s ease;
+}
+.whatsapp-flotante svg { width: 32px; height: 32px; }
+.whatsapp-flotante:hover { transform: scale(1.06); }
+
+@media (min-width: 1024px) {
+  .barra-fija { display: none; }
+  .whatsapp-flotante { display: flex; }
+}

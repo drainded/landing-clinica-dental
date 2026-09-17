@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco</title>
+<meta name="description" content="Clínica dental en Atlacomulco, Estado de México. Limpieza, ortodoncia y blanqueamiento dental. Agende su cita por WhatsApp o llamada.">
+<link rel="canonical" href="https://clinicadental-atlacomulco.netlify.app/">
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+<!--
+  SEO y compartición (sección 10.4 del spec). Estos valores están escritos
+  de forma literal a propósito: los rastreadores que arman la tarjeta de
+  WhatsApp/redes no ejecutan JavaScript, así que NO se generan desde
+  js/principal.js. Al llegar los datos reales (T-23), actualizar aquí
+  Y en el objeto NEGOCIO de js/principal.js.
+-->
+<meta property="og:type" content="business.business">
+<meta property="og:title" content="Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco">
+<meta property="og:description" content="La confianza en tu sonrisa comienza aquí. Limpieza, ortodoncia y blanqueamiento dental en Atlacomulco. Agende su cita por WhatsApp.">
+<meta property="og:image" content="https://clinicadental-atlacomulco.netlify.app/assets/og-image.png">
+<meta property="og:url" content="https://clinicadental-atlacomulco.netlify.app/">
+<meta property="og:locale" content="es_MX">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco">
+<meta name="twitter:description" content="La confianza en tu sonrisa comienza aquí. Agende su cita por WhatsApp o llamada.">
+<meta name="twitter:image" content="https://clinicadental-atlacomulco.netlify.app/assets/og-image.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dentist",
+  "name": "Clínica Dental Dr. Héctor Manuel Rojas Pérez",
+  "image": "https://clinicadental-atlacomulco.netlify.app/assets/og-image.png",
+  "telephone": "+52 712 139 0384",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Calle Rafael Favila 14A, Colonia El Calvario",
+    "postalCode": "50450",
+    "addressLocality": "Atlacomulco",
+    "addressRegion": "Estado de México",
+    "addressCountry": "MX"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 19.7975627,
+    "longitude": -99.8719214
+  },
+  "openingHoursSpecification": [
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "09:00", "closes": "19:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "14:00" }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="preload" as="image" href="assets/img/hero-1.jpg">
+
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<a class="salto-contenido" href="#contenido-principal">Saltar al contenido principal</a>
+
+<!-- ============ HEADER (sección 4.1) ============ -->
+<header class="encabezado">
+  <div class="encabezado__contenedor contenedor">
+    <a href="#inicio" class="encabezado__logo" aria-label="Ir al inicio — Clínica Dental Dr. Héctor Manuel Rojas Pérez">
+      <img src="assets/img/logo.svg" alt="" width="40" height="40">
+      <span>Clínica Dental<br><strong>Dr. Rojas Pérez</strong></span>
+    </a>
+
+    <nav class="encabezado__nav" aria-label="Navegación principal">
+      <ul>
+        <li><a href="#servicios">Servicios</a></li>
+        <li><a href="#doctor">El doctor</a></li>
+        <li><a href="#galeria">Galería</a></li>
+        <li><a href="#resenas">Reseñas</a></li>
+        <li><a href="#ubicacion">Ubicación</a></li>
+      </ul>
+    </nav>
+
+    <a class="encabezado__telefono boton boton--fantasma" data-campo="telefono-href" href="tel:">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <span data-campo="telefono-display"></span>
+    </a>
+
+    <a class="encabezado__llamar-movil boton boton--acento" data-campo="telefono-href" href="tel:" aria-label="Llamar a la clínica">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      Llamar
+    </a>
+  </div>
+</header>
+
+<main id="contenido-principal">
+
+  <!-- ============ HERO (sección 4.2) ============ -->
+  <section class="hero" id="inicio" aria-label="Presentación de la clínica">
+    <div class="hero__slider" id="heroSlider">
+      <img class="hero__slide" src="assets/img/hero-1.jpg" alt="" width="1200" height="675">
+      <img class="hero__slide" src="assets/img/hero-2.jpg" alt="" width="1920" height="1440" loading="lazy">
+      <img class="hero__slide" src="assets/img/hero-3.jpg" alt="" width="1920" height="1440" loading="lazy">
+      <div class="hero__overlay" aria-hidden="true"></div>
+    </div>
+
+    <div class="hero__contenido contenedor">
+      <img class="hero__logo" src="assets/img/logo.svg" alt="" width="64" height="64">
+      <h1 class="hero__titulo">Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco</h1>
+      <p class="hero__eslogan">La confianza en tu sonrisa comienza aquí</p>
+
+      <a class="boton boton--whatsapp boton--grande" data-campo="whatsapp-href" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.8-.9-2-1s-.5-.1-.7.1-.8 1-.9 1.2-.3.2-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.4-.5.3-.4a.5.5 0 0 0 0-.5c-.1-.1-.7-1.7-1-2.3s-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.5 3.5 0 0 0-1 2.5c0 1.5 1 2.9 1.2 3.1s2 3.2 4.9 4.4a16 16 0 0 0 1.7.6 4 4 0 0 0 1.8.1 3 3 0 0 0 1.9-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.4z"/><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+        Agende su cita
+      </a>
+
+      <a class="hero__telefono" data-campo="telefono-href" href="tel:">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span data-campo="telefono-display"></span>
+      </a>
+
+      <p class="hero__horario" data-campo="horario-resumen"></p>
+    </div>
+
+    <div class="hero__puntos" id="heroPuntos" role="tablist" aria-label="Seleccionar imagen destacada"></div>
+  </section>
+
+  <!-- ============ SERVICIOS (sección 4.3) ============ -->
+  <section class="servicios" id="servicios" aria-labelledby="servicios-titulo">
+    <div class="contenedor">
+      <h2 id="servicios-titulo">Nuestros servicios</h2>
+      <p class="seccion__intro">Cuidamos su sonrisa con tratamientos pensados para toda la familia.</p>
+
+      <ul class="servicios__rejilla">
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5c-2.2 0-3.3-1.5-5.5-1.5S3 5.6 3 8.5c0 3.5 1.8 6.8 2.5 9.5.4 1.6 1 3 2.3 3 1.5 0 1.7-2.3 2.2-4.3.3-1.1.6-2.2 2-2.2s1.7 1.1 2 2.2c.5 2 .7 4.3 2.2 4.3 1.3 0 1.9-1.4 2.3-3C18.2 15.3 20 12 20 8.5c0-2.9-1.3-5-3.5-5S14.2 5 12 5z"/></svg>
+          <h3>Limpieza dental</h3>
+          <p>Eliminamos placa y sarro para prevenir caries y enfermedades de las encías.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9c2 4 2-3 4 0s0 6 2 6 0-8 2-8 0 8 2 8 0-6 2-6 2 7 4 0"/><circle cx="4" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="20" cy="9" r="1.4" fill="currentColor" stroke="none"/></svg>
+          <h3>Ortodoncia</h3>
+          <p>Corregimos la posición de los dientes con brackets y planes a la medida.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18c-3 0-5-3-5-6.5S6 5 9 5c1.2 0 1.8.6 3 .6S13.8 5 15 5c3 0 5 3 5 6.5S18 18 15 18c-1.2 0-1.8-.6-3-.6s-1.8.6-3 .6z"/><path d="M12 3v1.5M18.5 6l-1 1M5.5 6l1 1"/></svg>
+          <h3>Blanqueamiento</h3>
+          <p>Recuperamos el blanco natural de su sonrisa con tratamientos seguros.</p>
+        </li>
+
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 0-5 2-5 5 0 3 2 4 2 7 0 1.5.5 3 1.5 3s1-2 1-3.5.5-2 1-2 1 .5 1 2 0 3.5 1 3.5 1.5-1.5 1.5-3c0-3 2-4 2-7 0-3-2-5-5-5z"/></svg>
+          <h3>Endodoncia</h3>
+          <p>Tratamos la raíz del diente para salvar piezas con daño profundo.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v7M9 6l3-3 3 3M8 12h8l-1 9H9z"/></svg>
+          <h3>Implantes dentales</h3>
+          <p>Reemplazamos piezas perdidas con soluciones fijas y duraderas.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M9 15c-3 0-5 2-5 5h16c0-3-2-5-5-5z"/></svg>
+          <h3>Odontopediatría</h3>
+          <p>Cuidado dental especializado y amigable para los más pequeños.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20c0-4 1.5-6 1.5-9a3.5 3.5 0 1 1 7 0c0 3 1.5 5 1.5 9"/><path d="M8.5 13.5c1-1 2-1 3.5 0s2.5 1 3.5 0"/></svg>
+          <h3>Parodoncia</h3>
+          <p>Tratamos las encías para detener su deterioro y proteger la raíz de sus dientes.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v7"/><path d="M8.5 7.5 12 11l3.5-3.5"/><path d="M6 15c0 3.5 2.5 6 6 6s6-2.5 6-6"/></svg>
+          <h3>Exodoncia</h3>
+          <p>Extraemos piezas dañadas o sin remedio con un procedimiento seguro y sin dolor.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v4c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V7z"/><path d="M9.5 12.5 11 14l3.5-3.5"/></svg>
+          <h3>Cirugía bucal</h3>
+          <p>Resolvemos casos complejos, como muelas del juicio o lesiones, con la mayor seguridad.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15c1-5 3.5-8 8-8s7 3 8 8"/><path d="M4 15c0 3 3 5 8 5s8-2 8-5"/><path d="M9 15h.01M15 15h.01"/></svg>
+          <h3>Estética dental</h3>
+          <p>Diseñamos sonrisas más armoniosas con carillas y tratamientos a la medida.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11c0-4 3-8 7-8s7 4 7 8c0 3-1.5 4.5-1.5 7.5S16.5 22 12 22s-4.5-2-5.5-3.5S5 14 5 11z"/><path d="M9 11h6"/></svg>
+          <h3>Prótesis dental</h3>
+          <p>Restauramos piezas ausentes con prótesis fijas o removibles, cómodas y naturales.</p>
+        </li>
+        <li class="servicios__tarjeta">
+          <svg class="servicios__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M15 4v3h3"/><path d="M9 13h6M9 16.5h6"/></svg>
+          <h3>Operatoria dental</h3>
+          <p>Reparamos caries y fracturas con resinas que devuelven forma y función a la pieza.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SOBRE EL DOCTOR (sección 4.4) ============ -->
+  <section class="doctor" id="doctor" aria-labelledby="doctor-titulo">
+    <div class="contenedor doctor__grid">
+      <img class="doctor__foto" src="assets/img/doctor.jpg" alt="Fotografía del Dr. Héctor Manuel Rojas Pérez" width="907" height="1205" loading="lazy">
+      <div class="doctor__info">
+        <h2 id="doctor-titulo">Dr. Héctor Manuel Rojas Pérez</h2>
+        <p class="doctor__credencial">Cédula profesional: 3578688</p>
+        <p>El Dr. Héctor Manuel Rojas Pérez es un profesional de la salud bucodental egresado de la Universidad Autónoma del Estado de México (UAEMex), donde obtuvo el título de Licenciatura como Cirujano Dentista. Cuenta con cédula profesional federal número 3578688, avalada por la Secretaría de Educación Pública (SEP) desde el año 2002.   Con más de dos décadas de trayectoria y una amplia experiencia en la atención clínica, atiende en su consultorio propio, donde siempre se ha distinguido por brindar un trato profundamente humano, empático y cercano a cada uno de sus pacientes. Su compromiso se centra en generar un ambiente de confianza, cuidado y bienestar, ofreciendo tratamientos odontológicos personalizados con los más altos estándares profesionales. </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GALERÍA (sección 4.5) ============ -->
+  <section class="galeria" id="galeria" aria-labelledby="galeria-titulo">
+    <div class="contenedor">
+      <h2 id="galeria-titulo">Conozca nuestro consultorio</h2>
+      <p class="seccion__intro">Un espacio limpio y cómodo, pensado para su tranquilidad.</p>
+      <ul class="galeria__rejilla">
+        <li><img src="assets/img/galeria-1.jpg" alt="Fotografía 1 del consultorio" width="900" height="675" loading="lazy"></li>
+        <li><img src="assets/img/galeria-2.jpg" alt="Fotografía 2 del consultorio" width="900" height="675" loading="lazy"></li>
+        <li><img src="assets/img/galeria-3.jpg" alt="Fotografía 3 del consultorio" width="900" height="675" loading="lazy"></li>
+        <li><img src="assets/img/galeria-4.jpg" alt="Fotografía 4 del consultorio" width="900" height="675" loading="lazy"></li>
+        <li><img src="assets/img/galeria-5.jpg" alt="Fotografía 5 del consultorio" width="900" height="675" loading="lazy"></li>
+        <li><img src="assets/img/galeria-6.jpg" alt="Fotografía 6 del consultorio" width="900" height="675" loading="lazy"></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ RESEÑAS (sección 4.6) ============ -->
+  <section class="resenas" id="resenas" aria-labelledby="resenas-titulo">
+    <div class="contenedor">
+      <h2 id="resenas-titulo">Lo que dicen nuestros pacientes</h2>
+      <ul class="resenas__rejilla">
+        <li class="resenas__tarjeta">
+          <p class="resenas__estrellas" aria-label="5 de 5 estrellas">★★★★★</p>
+          <p>"Muy buena atención, puntualidad y rapidez"</p>
+          <p><strong>Lila Auro</strong></p>
+        </li>
+        <li class="resenas__tarjeta">
+          <p class="resenas__estrellas" aria-label="5 de 5 estrellas">★★★★★</p>
+          <p>"Muy profesional; ofrecen un trato excelente y un gran servicio. No tengo que esperar mucho para que me atiendan y la cita se cumple exactamente a la hora prevista."</p>
+          <p><strong>Gabriel</strong></p>
+        </li>
+        <li class="resenas__tarjeta">
+          <p class="resenas__estrellas" aria-label="5 de 5 estrellas">★★★★★</p>
+          <p>"Tuve una experiencia excelente en esta clínica dental. Muy profesional y amable, y explico todo con claridad durante cada tratamiento."</p>
+          <p><strong>Ian Jose</strong></p>
+        </li>
+      </ul>
+      <a class="resenas__ver-todas" href="https://www.google.com/maps/place/Cl%C3%ADnica+Dental+Dr.+H%C3%A9ctor+Manuel+Rojas+P%C3%A9rez/@19.7976421,-99.8720588,19.75z/data=!4m16!1m9!3m8!1s0x85d2593695cad9b9:0x4cee7d242147559e!2sCl%C3%ADnica+Dental+Dr.+H%C3%A9ctor+Manuel+Rojas+P%C3%A9rez!8m2!3d19.7975627!4d-99.8719214!9m1!1b1!16s%2Fg%2F11rsryxjrd!3m5!1s0x85d2593695cad9b9:0x4cee7d242147559e!8m2!3d19.7975627!4d-99.8719214!16s%2Fg%2F11rsryxjrd?entry=ttu&g_ep=EgoyMDI2MDkxNS4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener">Ver todas las reseñas en Google →</a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER / UBICACIÓN (sección 4.7) ============ -->
+<footer class="pie" id="ubicacion" aria-labelledby="ubicacion-titulo">
+  <div class="contenedor pie__grid">
+    <div class="pie__mapa">
+      <a data-campo="mapa-href" href="#" target="_blank" rel="noopener" aria-label="Abrir la ubicación de la clínica en Google Maps">
+        <img src="assets/img/mapa-estatico.jpg" alt="Mapa de ubicación de la clínica en Atlacomulco, Estado de México" width="900" height="520" loading="lazy">
+      </a>
+    </div>
+
+    <div class="pie__info">
+      <h2 id="ubicacion-titulo">Visítenos</h2>
+      <p data-campo="direccion"></p>
+
+      <h3>Horario de atención</h3>
+      <ul class="pie__horario" data-campo="horario-completo-lista"></ul>
+
+      <a class="pie__telefono" data-campo="telefono-href" href="tel:">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span data-campo="telefono-display"></span>
+      </a>
+
+      <div class="pie__acciones">
+        <a class="boton boton--whatsapp" data-campo="whatsapp-href" href="#" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
+  <p class="pie__derechos">© <span id="anioActual"></span> Clínica Dental Dr. Héctor Manuel Rojas Pérez. Todos los derechos reservados.</p>
+</footer>
+
+<!-- ============ ELEMENTOS FIJOS DE CONTACTO (sección 4.8) ============ -->
+<nav class="barra-fija" aria-label="Contacto rápido">
+  <a class="barra-fija__boton barra-fija__boton--llamar" data-campo="telefono-href" href="tel:">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    Llamar
+  </a>
+  <a class="barra-fija__boton barra-fija__boton--whatsapp" data-campo="whatsapp-href" href="#" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.8-.9-2-1s-.5-.1-.7.1-.8 1-.9 1.2-.3.2-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.4-.5.3-.4a.5.5 0 0 0 0-.5c-.1-.1-.7-1.7-1-2.3s-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.5 3.5 0 0 0-1 2.5c0 1.5 1 2.9 1.2 3.1s2 3.2 4.9 4.4a16 16 0 0 0 1.7.6 4 4 0 0 0 1.8.1 3 3 0 0 0 1.9-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.4z"/><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+    WhatsApp
+  </a>
+</nav>
+
+<a class="whatsapp-flotante" data-campo="whatsapp-href" href="#" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.8-.9-2-1s-.5-.1-.7.1-.8 1-.9 1.2-.3.2-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.4-.5.3-.4a.5.5 0 0 0 0-.5c-.1-.1-.7-1.7-1-2.3s-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.5 3.5 0 0 0-1 2.5c0 1.5 1 2.9 1.2 3.1s2 3.2 4.9 4.4a16 16 0 0 0 1.7.6 4 4 0 0 0 1.8.1 3 3 0 0 0 1.9-1.3 2.3 2.3 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.4z"/><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+</a>
+
+<script src="js/principal.js"></script>
+</body>
+</html>
