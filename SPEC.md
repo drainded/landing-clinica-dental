@@ -1,6 +1,6 @@
-# Spec-Driven Development — Landing Clínica Dental Dr. Héctor Manuel Rojas Pérez
+# Spec — Landing Clínica Dental Dr. Héctor Manuel Rojas Pérez
 
-**Versión:** 1.0 · **Fecha:** 2026-09-08 · **Estado:** especificación aprobada, pendiente de implementación
+**Versión:** 1.0 · **Fecha:** 2026-09-08 · **Estado:** especificación aprobada e implementada
 
 ---
 
