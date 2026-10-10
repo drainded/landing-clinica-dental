@@ -31,7 +31,7 @@ Pacientes de Atlacomulco y alrededores, mayoritariamente en teléfono móvil, co
 ### 2.1 Dentro del alcance
 
 - Una única página HTML estática, responsive, mobile-first, en español de México.
-- Siete bloques de contenido: hero con slider, servicios, sobre el doctor, galería, reseñas, footer con mapa y horarios, más los elementos fijos de contacto.
+- Siete bloques de contenido: hero con dentadura 3D interactiva, servicios, sobre el doctor, galería, reseñas, footer con mapa y horarios, más los elementos fijos de contacto.
 - Contacto por WhatsApp y por llamada telefónica.
 - Base mínima de SEO local y de compartición en redes (ver sección 10.4).
 - Despliegue en Netlify o Cloudflare Pages.
@@ -59,7 +59,7 @@ Estos puntos se excluyen de forma explícita. No son olvidos: se decidieron y se
 
 | ID | Requisito |
 |---|---|
-| RF-01 | La página muestra el nombre de la clínica, su eslogan y su ubicación en el primer pantallazo. |
+| RF-01 | La página muestra el nombre de la clínica y su ubicación en el primer pantallazo; el eslogan y el botón «Servicios» aparecen al abrirse la mandíbula de la dentadura, y siempre visibles si el 3D no se muestra (D-15). |
 | RF-02 | El teléfono es pulsable (`tel:`) desde cualquier punto de la página. |
 | RF-03 | Existe un acceso a WhatsApp permanentemente visible, con mensaje inicial prellenado. |
 | RF-04 | Se listan los servicios de la clínica con un ícono y una descripción breve cada uno. |
@@ -68,7 +68,7 @@ Estos puntos se excluyen de forma explícita. No son olvidos: se decidieron y se
 | RF-07 | Se muestran reseñas reales de pacientes; si no hay reseñas, la sección no se renderiza. |
 | RF-08 | El footer muestra la dirección, un mapa que enlaza a la navegación, y el horario completo. |
 | RF-09 | El hero muestra un resumen del horario en una línea. |
-| RF-10 | Las imágenes del hero rotan automáticamente con transición de fundido. |
+| RF-10 | ~~Las imágenes del hero rotan automáticamente~~ Sustituido por la dentadura 3D interactiva del hero (D-15; ver `specs/001-dentadura-3d-hero/`). |
 | RF-11 | En escritorio hay navegación por anclas a las secciones principales. |
 
 ### 3.2 Requisitos no funcionales
@@ -76,7 +76,7 @@ Estos puntos se excluyen de forma explícita. No son olvidos: se decidieron y se
 | ID | Requisito |
 |---|---|
 | RNF-01 | Mobile-first: el diseño se construye desde 360 px de ancho hacia arriba. |
-| RNF-02 | Sin frameworks ni librerías externas de JS o CSS. |
+| RNF-02 | Sin frameworks de JS o CSS. Solo se admiten las librerías de animación y 3D necesarias (GSAP, ScrollTrigger, Lenis, Three.js o su alternativa ligera aprobada en el plan), descargadas en `assets/js/vendor/` con su versión y licencia registradas; nunca desde un CDN ni como script de terceros (ver D-14). |
 | RNF-03 | Sin scripts de terceros ni cookies, por lo que no se requiere banner de consentimiento. |
 | RNF-04 | Todos los colores y tipografías viven en variables CSS en un único bloque. |
 | RNF-05 | Todos los datos del negocio viven en un único bloque de constantes. |
@@ -96,20 +96,21 @@ Orden vertical de la página: **Hero → Servicios → Sobre el doctor → Galer
 
 ### 4.2 Hero
 
-Sección a pantalla completa con el slider de fotografías al fondo y una capa oscura encima que garantiza el contraste del texto sea cual sea la fotografía.
+Sección a pantalla completa con **fondo blanco** (`--color-superficie`), sin slider ni capa oscura, y la **dentadura 3D** centrada (contorno `--color-acento`, relleno blanco). Spec: `specs/001-dentadura-3d-hero/`.
 
-Orden de los elementos, de arriba abajo:
+Elementos del hero:
 
 1. Logo de la clínica.
-2. `<h1>`: «Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco».
-3. Eslogan: **«La confianza en tu sonrisa comienza aquí»**, tipográficamente el elemento más grande del hero.
-4. Botón principal: **«Agende su cita»**, que abre WhatsApp.
-5. Teléfono pulsable, en tamaño menor que el botón.
-6. Línea de horario resumido: «Lun–Vie 9:00–19:00 · Sáb 9:00–14:00».
+2. `<h1>`: «Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco» (texto oscuro, siempre en el DOM).
+3. Dentadura 3D, cerrada al cargar. Con el scroll la mandíbula se abre; con el cursor/toque se deforma.
+4. Eslogan: **«La confianza en tu sonrisa comienza aquí»** y botón **«Servicios»** (ancla a §4.3): se revelan cuando la mandíbula está abierta. Sin 3D, con ahorro de datos o `prefers-reduced-motion`, se muestran siempre.
+5. Botón principal **«Agende su cita»** (WhatsApp), teléfono pulsable y línea de horario resumido «Lun–Vie 9:00–19:00 · Sáb 9:00–14:00»: se mantienen visibles desde el inicio (principio II).
 
-La jerarquía visual y la semántica no coinciden a propósito: el `<h1>` contiene nombre y ciudad porque es lo que se busca en Google y lo que se muestra al compartir el enlace, mientras que el eslogan domina visualmente porque es lo que genera la conexión con el paciente.
+El `<h1>` contiene nombre y ciudad por SEO y compartición; el eslogan es lo que genera la conexión con el paciente y domina visualmente cuando aparece.
 
-**Slider:** 3 imágenes, transición de fundido cada 6 segundos, sin flechas, con tres puntos indicadores discretos y pulsables. Se pausa al pasar el cursor por encima. Se desactiva por completo —quedando una imagen fija— si el navegador solicita `prefers-reduced-motion` o si solo hay una imagen disponible. La primera imagen se carga con prioridad; las otras dos, en diferido.
+**Respaldo:** póster estático WebP con la dentadura cerrada (`assets/img/diente-poster.webp`), que es además el LCP. El slider de 3 fotos se retira (D-15).
+
+---
 
 ### 4.3 Servicios
 
@@ -183,7 +184,7 @@ El verde azulado del acento se eligió porque contrasta con el beige sin competi
 | `--fuente-titulos` | `'Poppins', system-ui, sans-serif` |
 | `--fuente-texto` | `'Inter', system-ui, sans-serif` |
 
-Se cargan desde Google Fonts únicamente los pesos necesarios (Poppins 600/700, Inter 400/500), con `preconnect` y `display=swap`. Si en la fase de pulido el coste de red no lo justifica, se sustituyen por la pila del sistema; la decisión quedaría registrada en la sección 11.
+Se autoalojan en WOFF2 en `assets/fonts/` únicamente los pesos necesarios (Poppins 600/700, Inter 400/500), con `display=swap` y sin peticiones a Google Fonts (D-16).
 
 ### 5.3 Escala y espaciado
 
@@ -233,15 +234,18 @@ DENTISTALANDING/
 ├── assets/
 │   ├── img/
 │   │   ├── logo.svg
-│   │   ├── hero-1.webp
-│   │   ├── hero-2.webp
-│   │   ├── hero-3.webp
+│   │   ├── diente-poster.webp
 │   │   ├── doctor.webp
 │   │   ├── galeria-1.webp … galeria-6.webp
 │   │   └── mapa-estatico.webp
+│   ├── models/
+│   │   ├── diente.glb
+│   │   └── diente-ligero.glb
+│   ├── fonts/            (Poppins, Inter en WOFF2)
+│   ├── js/vendor/        (three.js, GLTFLoader, MeshoptDecoder)
 │   └── og-image.jpg
 ├── favicon.ico
-└── Spec-Driven-Development.md
+└── SPEC.md
 ```
 
 ### 7.1 Especificación de imágenes
@@ -321,9 +325,9 @@ Cuatro hitos. Cada tarea es verificable de forma independiente; los criterios se
 
 ### Hito 3 — Comportamiento
 
-- [ ] **T-15 · Slider del hero.** Fundido cada 6 s entre 3 imágenes, con puntos indicadores.
+- [x] ~~**T-15 · Slider del hero.**~~ *Retirado por D-15.* Original: Fundido cada 6 s entre 3 imágenes, con puntos indicadores.
   *Criterio:* el fundido no produce parpadeo ni desplazamiento; los puntos indican la imagen activa y permiten saltar a otra.
-- [ ] **T-16 · Pausa y accesibilidad del slider.** Pausa al pasar el cursor; desactivación total con `prefers-reduced-motion` o con una sola imagen.
+- [x] ~~**T-16 · Pausa y accesibilidad del slider.**~~ *Retirado por D-15; el equivalente está en `specs/001-dentadura-3d-hero/`.* Original: Pausa al pasar el cursor; desactivación total con `prefers-reduced-motion` o con una sola imagen.
   *Criterio:* activando la reducción de movimiento en el sistema operativo, la rotación no ocurre y queda una imagen fija.
 - [ ] **T-17 · Enlaces de contacto.** Todos los `tel:` y todos los `wa.me` con el texto prellenado.
   *Criterio:* cada botón de WhatsApp abre la conversación con «Buen día, me gustaría agendar una cita» ya escrito; en escritorio abre WhatsApp Web.
@@ -351,7 +355,11 @@ Se aplican a toda la página, no a una tarea concreta.
 
 ### 10.1 Rendimiento
 - Contenido principal visible en menos de 2,5 s sobre 4G.
-- Peso total de la página inferior a 1,5 MB(opcional).
+- Presupuesto de peso (peso transferido, comprimido):
+  - Carga crítica (lo necesario para ver la página y contactar): máximo 500 KB.
+  - Carga diferida (3D, animaciones, modelo, texturas): máximo 1,5 MB, iniciada solo después del primer pintado y cuando el navegador esté libre.
+  - Total en escritorio: máximo aproximado de 2 MB. En móvil de gama media: máximo aproximado de 1,5 MB.
+  - Ningún cambio se considera terminado si supera estos límites; el peso real se mide y se reporta en cada feature.
 - Sin desplazamiento de contenido durante la carga.
 
 ### 10.2 Responsive
@@ -391,6 +399,9 @@ Se aplican a toda la página, no a una tarea concreta.
 | 2026-09-08 | El `<h1>` lleva nombre y ciudad; el eslogan domina visualmente | La jerarquía semántica sirve al buscador y a la compartición; la visual, al paciente. |
 | 2026-09-08 | Horario resumido en una línea en el hero | Permite decidir si llamar ahora sin restarle peso al botón principal. |
 | 2026-09-08 | Colores definidos como tokens desde el inicio | El cliente anticipa un cambio de paleta cuando entregue el logo definitivo. |
+| 2026-10-09 | D-14 · Se permiten librerías de animación y 3D autoalojadas en `assets/js/vendor/`; se reemplaza el presupuesto de peso de §10.1 por el de la constitución v2.0.0; se enmienda RNF-02 | La identidad visual pasa a basarse en movimiento y en un modelo 3D del diente. Se carga de forma diferida, con una imagen estática de respaldo visible mientras carga y cuando no se puede mostrar el 3D (reducción de movimiento, ahorro de datos, equipo lento o sin WebGL). |
+| 2026-10-09 | D-15 · Se retira el slider de fotos del hero (y `hero-1/2/3`, overlay oscuro, RF-10 original, T-15/T-16). El hero pasa a fondo blanco con la dentadura 3D centrada; el eslogan y el botón «Servicios» se revelan al abrirse la mandíbula (siempre visibles sin 3D). Constitución v2.1.0 | La dentadura interactiva sustituye a las fotos como elemento memorable; el póster estático es el respaldo y el LCP. |
+| 2026-10-09 | D-16 · Poppins/Inter se autoalojan en WOFF2 (`assets/fonts/`); se retira Google Fonts | Criterio «sin peticiones a dominios externos», RNF-03 y menor tiempo de carga; cuentan en la carga crítica. |
 
 ---
 

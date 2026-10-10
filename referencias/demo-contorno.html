@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Demo · dentadura de contorno deformable</title>
+<!--
+  REFERENCIA, no es parte del sitio. Muestra cómo dibujar la dentadura con relleno
+  blanco y contorno #0F6E6E, y cómo el cursor deforma la figura.
+  Cómo verla: desde la raíz del proyecto ejecute `npx serve .` y abra
+  /referencias/demo-contorno.html
+  En el proyecto real, three.js se descarga a assets/js/vendor/ (no se usa CDN).
+-->
+<style>
+  :root{ --color-fondo:#F5EFE6; --color-acento:#0F6E6E; }
+  html,body{ margin:0; height:100%; background:var(--color-fondo); }
+  body{ font-family:system-ui,sans-serif; color:#1d2b2b; }
+  .hero{ position:relative; height:260vh; }                     /* recorrido de scroll de la apertura */
+  .stage{ position:sticky; top:0; height:100vh; overflow:hidden; }
+  canvas{ display:block; width:100%; height:100%; touch-action:pan-y; } /* no bloquea el scroll vertical */
+  .marca{ position:absolute; top:0; left:0; right:0; margin:0; padding:14px 16px; font-size:.8rem; font-weight:600;
+          letter-spacing:.04em; text-align:center; color:var(--color-acento); pointer-events:none; }
+  .reveal{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+           gap:clamp(14px,3vh,26px); padding:0 24px 0; text-align:center; pointer-events:none; }
+  .eslogan{ margin:0; max-width:17ch; font-size:clamp(1.35rem,4.2vw,3rem); line-height:1.08; font-weight:800;
+            color:var(--color-acento); opacity:0; transform:translateY(18px); will-change:opacity,transform;
+            text-shadow:0 0 18px var(--color-fondo),0 0 6px var(--color-fondo); }
+  .cta{ pointer-events:auto; display:inline-block; padding:14px 28px; border-radius:999px; background:var(--color-acento);
+        color:#fff; font-weight:700; text-decoration:none; opacity:0; transform:translateY(14px); visibility:hidden;
+        will-change:opacity,transform; }
+  .cta:focus-visible{ outline:3px solid #1d2b2b; outline-offset:3px; }
+  .pista{ position:absolute; bottom:18px; left:0; right:0; text-align:center; font-size:.8rem; color:var(--color-acento); }
+  #servicios{ min-height:100vh; padding:80px 24px; background:#fff; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+</head>
+<body>
+<main class="hero" id="inicio">
+  <div class="stage" id="stage">
+    <p class="marca">Clínica Dental Dr. Héctor Manuel Rojas Pérez · Atlacomulco</p>
+  </div>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+const q = new URLSearchParams(location.search);
+const MODEL = q.get('model') || '../assets/models/diente.glb';   // ?model=../assets/models/diente-ligero.glb para probar la versión de móvil
+const LINE_COLOR = '#0F6E6E';                 // contorno (token --color-acento)
+const LINE_PX = +q.get('px') || 4.5;          // grosor del contorno en píxeles CSS
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (q.get('bg') === 'transparent') document.documentElement.style.background = document.body.style.background = 'transparent';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.getElementById('stage').prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+
+// ---- Deformación: se aplica en el shader de vértices, en espacio de cámara ----
+const U = {
+  uCursor: { value: new THREE.Vector3(0, 0, -5) }, // posición del cursor en espacio de cámara
+  uPush:   { value: 0 },      // empuje hacia afuera del cursor
+  uBulge:  { value: 0 },      // abultamiento hacia la cámara
+  uWave:   { value: 0 },      // ondulación
+  uSigma:  { value: 0.55 },    // radio de influencia (unidades del modelo)
+  uTime:   { value: 0 },
+  uThick:  { value: 0.008 },  // grosor del contorno en unidades NDC
+  uAspect: { value: 1 },
+  uColor:  { value: new THREE.Color(LINE_COLOR) },
+};
+const DEFORM = /* glsl */`
+  uniform vec3 uCursor; uniform float uPush, uBulge, uWave, uSigma, uTime;
+  vec4 deformView(vec4 mv){
+    vec2 d = mv.xy - uCursor.xy;
+    float r = length(d);
+    float f = exp(-(r*r) / (2.0*uSigma*uSigma));
+    mv.xy += (d / max(r, 1e-4)) * f * uPush;
+    mv.z  += f * uBulge + f * uWave * sin(r*9.0 - uTime*5.0);
+    return mv;
+  }`;
+const fill = new THREE.ShaderMaterial({
+  uniforms: U,
+  vertexShader: DEFORM + `void main(){ gl_Position = projectionMatrix * deformView(modelViewMatrix * vec4(position,1.0)); }`,
+  fragmentShader: `void main(){ gl_FragColor = vec4(1.0); }`,
+});
+// Contorno: "casco invertido". Se dibujan solo las caras traseras, desplazadas
+// en pantalla a lo largo de la normal; asoma un borde de grosor constante en px.
+const line = new THREE.ShaderMaterial({
+  uniforms: U, side: THREE.BackSide,
+  vertexShader: DEFORM + `
+    uniform float uThick, uAspect;
+    void main(){
+      vec4 clip = projectionMatrix * deformView(modelViewMatrix * vec4(position,1.0));
+      vec3 nv = normalize(normalMatrix * normal);
+      vec2 dir = nv.xy / max(length(nv.xy), 1e-4);
+      clip.xy += dir * vec2(1.0/uAspect, 1.0) * uThick * clip.w;
+      gl_Position = clip;
+    }`,
+  fragmentShader: `uniform vec3 uColor;
+    void main(){
+      gl_FragColor = vec4(uColor, 1.0);
+      #include <colorspace_fragment>
+    }`,
+});
+
+// ---- Carga del modelo y sustitución de materiales ----
+let jaw = null; const OPEN = THREE.MathUtils.degToRad(+q.get('open') || 40);
+const pivot = new THREE.Group(); pivot.rotation.order = 'YXZ'; scene.add(pivot);
+new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(MODEL, (g) => {
+  const meshes = []; g.scene.traverse(o => { if (o.isMesh) meshes.push(o); });
+  for (const m of meshes) {
+    m.material = fill; m.frustumCulled = false;
+    const outline = new THREE.Mesh(m.geometry, line); outline.frustumCulled = false;
+    if (q.get('only') === 'fill') outline.visible = false;
+    if (q.get('only') === 'line') m.visible = false;
+    m.add(outline);        // hijo de la malla: hereda su transformación (incluida la de la mandíbula)
+  }
+  jaw = g.scene.getObjectByName('mandibula'); if (jaw) jaw.rotation.x = 0;   // empieza cerrada
+  pivot.add(g.scene); window.ready = true;
+}, undefined, (e) => { window.err = String(e); window.ready = true; });
+
+// ---- Cursor / toque ----
+const ptr = { ndc: new THREE.Vector2(0, 0), active: false, smooth: new THREE.Vector2(0, 0), speed: 0 };
+function setPointer(e){
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+  ptr.active = !REDUCED;
+}
+addEventListener('pointermove', setPointer);
+addEventListener('pointerdown', setPointer);
+addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') ptr.active = false; });
+document.documentElement.addEventListener('pointerleave', () => { ptr.active = false; });
+
+// ---- Tamaño ----
+let dist = 5, zoom = 1;
+function resize(){ 
+  const w = innerWidth, h = innerHeight, a = w / h;   // el escenario ocupa el viewport
+  renderer.setSize(w, h, false); camera.aspect = a;
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  dist = Math.max(5.0, 2.7 / (2 * halfTan * a));       // el modelo siempre cabe a lo ancho
+  camera.position.set(0, 0.15, dist * zoom); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
+  U.uAspect.value = a; U.uThick.value = LINE_PX / (h / 2);
+}
+addEventListener('resize', resize); resize();
+
+// ---- Scroll -> apertura de la mandíbula (scroll nativo, nunca se bloquea) ----
+const hero = document.getElementById('inicio');
+const clamp01 = (x) => Math.min(1, Math.max(0, x)), ease = (x) => x * x * (3 - 2 * x);
+let target = REDUCED ? 1 : 0, prog = target;
+function readScroll(){
+  if (REDUCED) return;
+  const max = hero.offsetHeight - innerHeight;
+  target = q.get('p') !== null ? +q.get('p') : clamp01(scrollY / max);
+}
+addEventListener('scroll', readScroll, { passive: true }); readScroll();
+
+// ---- Bucle ----
+let last = performance.now(), elapsed = 0, activity = 0;
+renderer.setAnimationLoop(() => {
+  const now = performance.now(), dt = Math.min((now - last) / 1000, 0.1); last = now; elapsed += dt;
+  const t = elapsed, k = 1 - Math.exp(-dt * 9);
+  U.uTime.value = t;
+  prog += (target - prog) * k * 0.6;
+  if (jaw) jaw.rotation.x = OPEN * ease(clamp01(prog / 0.7));   // abre en el primer 70 % del recorrido
+  const o = ease(clamp01(prog / 0.7));
+  zoom = 1 + 0.22 * o; camera.position.set(0, 0.15 - 0.2 * o, dist * zoom); camera.lookAt(0, -0.2 * o, 0);
+  const prev = ptr.smooth.clone(); ptr.smooth.lerp(ptr.ndc, k);
+  const speed = prev.distanceTo(ptr.smooth) / Math.max(dt, 1e-3);
+  activity += ((ptr.active ? 1 : 0) - activity) * k;
+  const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * dist;
+  U.uCursor.value.set(ptr.smooth.x * halfH * camera.aspect, ptr.smooth.y * halfH, -dist);
+  U.uPush.value  = activity * (0.13 + Math.min(speed * 0.03, 0.12));
+  U.uBulge.value = activity * 0.14;
+  U.uWave.value  = activity * 0.02;
+  // inclinación suave hacia el cursor + movimiento en reposo
+  const baseYaw = THREE.MathUtils.degToRad(+q.get('yaw') || 0);
+  const idle = baseYaw + ((REDUCED || q.get('still')) ? 0 : Math.sin(t * 0.5) * 0.12);
+  pivot.rotation.y = THREE.MathUtils.lerp(pivot.rotation.y, idle + ptr.smooth.x * 0.30 * activity, k);
+  pivot.rotation.x = THREE.MathUtils.lerp(pivot.rotation.x, -ptr.smooth.y * 0.14 * activity, k);
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
