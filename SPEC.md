@@ -8,11 +8,11 @@
 
 ### 1.1 El negocio
 
-Clínica Dental Dr. Héctor Manuel Rojas Pérez, ubicada en Atlacomulco, Estado de México (coordenadas `19.7975627, -99.8719214`). Es un consultorio local que atiende pacientes de la zona y hoy no tiene presencia web propia.
+Clínica Dental Dr. Héctor Manuel Rojas Pérez, ubicada en Atlacomulco, Estado de México (coordenadas `19.7975627, -99.8719214`). Es un consultorio local que atiende pacientes de la zona y hoy tiene presencia web propia.
 
 ### 1.2 El problema
 
-Los pacientes potenciales de la zona no tienen forma de conocer los servicios de la clínica ni de comprobar que es un lugar serio y limpio antes de acudir. Además existe otra clínica en la zona con una imagen digital más profesional, lo que desvía pacientes que comparan antes de decidir.
+Los pacientes potenciales de la zona ya tienen forma de conocer los servicios de la clínica y de comprobar que es un lugar serio y limpio antes de acudir, pero la estetica del sitio web es muy simple y puede mejorarse. Además existe otra clínica en la zona con una imagen digital más profesional, lo que desvía pacientes que comparan antes de decidir.
 
 ### 1.3 Objetivo del proyecto
 

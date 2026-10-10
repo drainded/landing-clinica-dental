@@ -1,6 +1,8 @@
 /**
  * Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco
- * Script único de comportamiento. Sin dependencias externas (RNF-02).
+ * Script base de comportamiento, sin dependencias externas (RNF-02).
+ * La dentadura 3D del hero vive en js/dentadura.js y se carga de forma
+ * diferida desde aquí (iniciarDentadura).
  *
  * IMPORTANTE (T-04, D-10): todos los datos reales del negocio se cambian
  * en el objeto NEGOCIO de abajo, y se propagan solos a header, hero, barra
@@ -16,6 +18,17 @@
  */
 (function () {
   "use strict";
+
+  /* ---------- 0. Constantes de la dentadura 3D ---------- */
+  // Umbrales de equipo modesto: el script de <head> en index.html usa los mismos
+  // valores; si se recalibran (T042), cambiarlos en los dos sitios.
+  var UMBRAL_MEMORIA_GB = 2;
+  var UMBRAL_NUCLEOS = 2;
+  var UMBRAL_FPS_MIN = 24;       // fps medios de los primeros 3 s por debajo de los cuales se degrada
+  var ANCHO_MOVIL_PX = 768;      // táctil por debajo de este ancho → nivel ligero
+  var RETRASO_CARGA_MS = 200;    // respaldo si no hay requestIdleCallback
+  var RUTA_MODELO_COMPLETO = "assets/models/diente.glb";
+  var RUTA_MODELO_LIGERO = "assets/models/diente-ligero.glb";
 
   /* ---------- 1. Datos del negocio (sección 8 del spec — valores de prueba) ---------- */
   var NEGOCIO = {
@@ -102,78 +115,63 @@
     if (anio) anio.textContent = new Date().getFullYear();
   }
 
-  /* ---------- 3. Slider del hero (T-15 / T-16) ---------- */
-  function iniciarSliderHero() {
-    var slider = document.getElementById("heroSlider");
-    if (!slider) return;
+  /* ---------- 3. Dentadura 3D del hero (carga diferida) ---------- */
+  function esEquipoModesto() {
+    var memoria = navigator.deviceMemory;
+    var nucleos = navigator.hardwareConcurrency;
+    return (memoria !== undefined && memoria <= UMBRAL_MEMORIA_GB) ||
+           (nucleos !== undefined && nucleos <= UMBRAL_NUCLEOS);
+  }
 
-    var slides = Array.prototype.slice.call(slider.querySelectorAll(".hero__slide"));
-    var contenedorPuntos = document.getElementById("heroPuntos");
-    if (slides.length <= 1) return; // una sola imagen: queda fija, sin rotación (RF-10 / T-16)
+  function elegirNivel() {
+    var tactil = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    return tactil && window.innerWidth < ANCHO_MOVIL_PX ? "ligero" : "completo";
+  }
 
-    var prefiereMenosMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefiereMenosMovimiento) return; // se anula toda la rotación (T-16)
+  function iniciarDentadura() {
+    var raiz = document.documentElement;
+    if (raiz.dataset.hero !== "animado" || esEquipoModesto()) {
+      raiz.dataset.hero = "estatico";
+      return;
+    }
 
-    var indiceActual = 0;
-    var intervaloMs = 6000;
-    var temporizador = null;
-    var puntos = [];
+    var hero = document.getElementById("inicio");
+    var figura = hero && hero.querySelector(".hero__figura");
+    if (!figura) {
+      raiz.dataset.hero = "estatico";
+      return;
+    }
 
-    slides.forEach(function (slide, i) {
-      slide.classList.toggle("is-activa", i === 0);
-    });
+    var nivel = elegirNivel();
+    var rutaModelo = nivel === "ligero" ? RUTA_MODELO_LIGERO : RUTA_MODELO_COMPLETO;
 
-    if (contenedorPuntos) {
-      slides.forEach(function (_, i) {
-        var boton = document.createElement("button");
-        boton.type = "button";
-        boton.className = "hero__punto" + (i === 0 ? " is-activo" : "");
-        boton.setAttribute("role", "tab");
-        boton.setAttribute("aria-label", "Mostrar imagen " + (i + 1) + " de " + slides.length);
-        boton.setAttribute("aria-selected", i === 0 ? "true" : "false");
-        boton.addEventListener("click", function () {
-          irASlide(i);
-          reiniciarTemporizador();
+    function cargar() {
+      import("./dentadura.js")
+        .then(function (modulo) {
+          return modulo.iniciar({
+            hero: hero,
+            figura: figura,
+            nivel: nivel,
+            rutaModelo: rutaModelo,
+            umbralFps: UMBRAL_FPS_MIN
+          });
+        })
+        .catch(function () {
+          raiz.dataset.hero = "estatico";
         });
-        contenedorPuntos.appendChild(boton);
-        puntos.push(boton);
-      });
     }
 
-    function irASlide(indice) {
-      slides[indiceActual].classList.remove("is-activa");
-      if (puntos[indiceActual]) {
-        puntos[indiceActual].classList.remove("is-activo");
-        puntos[indiceActual].setAttribute("aria-selected", "false");
-      }
-      indiceActual = indice;
-      slides[indiceActual].classList.add("is-activa");
-      if (puntos[indiceActual]) {
-        puntos[indiceActual].classList.add("is-activo");
-        puntos[indiceActual].setAttribute("aria-selected", "true");
-      }
+    // Tras el primer pintado, para no competir con el LCP (el póster)
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(cargar);
+    } else {
+      setTimeout(cargar, RETRASO_CARGA_MS);
     }
-
-    function siguienteSlide() {
-      irASlide((indiceActual + 1) % slides.length);
-    }
-
-    function reiniciarTemporizador() {
-      if (temporizador) clearInterval(temporizador);
-      temporizador = setInterval(siguienteSlide, intervaloMs);
-    }
-
-    reiniciarTemporizador();
-
-    slider.addEventListener("mouseenter", function () {
-      if (temporizador) clearInterval(temporizador);
-    });
-    slider.addEventListener("mouseleave", reiniciarTemporizador);
   }
 
   /* ---------- 4. Inicio ---------- */
   document.addEventListener("DOMContentLoaded", function () {
     propagarDatosNegocio();
-    iniciarSliderHero();
+    iniciarDentadura();
   });
 })();

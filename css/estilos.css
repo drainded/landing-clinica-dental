@@ -6,6 +6,30 @@
    cada token.
    ============================================================ */
 
+/* ---------- 0. Fuentes autoalojadas (D-16) ---------- */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/poppins-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/poppins-700.woff2') format('woff2');
+}
+/* Inter es una fuente variable: un solo archivo cubre 400 y 500 */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('../assets/fonts/inter-400.woff2') format('woff2');
+}
+
 /* ---------- 1. Tokens de diseño (sección 5.1 / 5.2 / 5.3) ---------- */
 :root {
   /* Color — punto de partida; se espera que cambie con el logo definitivo (D-11) */
@@ -19,6 +43,8 @@
   --color-whatsapp-oscuro: #1DA851;
   --color-overlay: rgba(0, 0, 0, .45);
   --color-borde: rgba(15, 110, 110, .18);
+  --color-acento-suave: rgba(15, 110, 110, .08);
+  --color-estrella: #E8A93A;
 
   /* Tipografía */
   --fuente-titulos: 'Poppins', system-ui, -apple-system, sans-serif;
@@ -37,6 +63,7 @@
   --radio: 12px;
   --sombra: 0 10px 30px rgba(44, 44, 44, .10);
   --sombra-suave: 0 2px 10px rgba(44, 44, 44, .08);
+  --sombra-barra: 0 -4px 16px rgba(0, 0, 0, .12);
 
   /* Altura del header en escritorio, usada para el scroll-margin de anclas */
   --alto-header: 76px;
@@ -154,7 +181,7 @@ section { padding: var(--espacio-7) 0; }
   color: var(--color-acento-oscuro);
   border: 2px solid var(--color-borde);
 }
-.boton--fantasma:hover { background: rgba(15, 110, 110, .08); }
+.boton--fantasma:hover { background: var(--color-acento-suave); }
 
 .boton--grande { padding: 1.1rem 2.2rem; font-size: 1.1rem; box-shadow: var(--sombra); }
 
@@ -217,69 +244,74 @@ section { padding: var(--espacio-7) 0; }
 }
 
 /* ---------- 5. Hero ---------- */
+/* Modo base = estático: póster, eslogan y «Servicios» visibles, flujo normal.
+   El modo animado (data-hero="animado") se añade en las historias US3/US4. */
 .hero {
+  position: relative;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+.hero__escenario {
   position: relative;
   min-height: 100svh;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  overflow: hidden;
-  color: var(--color-superficie);
-}
-.hero__slider {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-.hero__slide {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 1.2s ease;
-}
-.hero__slide.is-activa { opacity: 1; }
-/* Sin JS o con una sola imagen: la primera queda fija y visible */
-.hero__slide:first-child { opacity: 1; }
-.hero__overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, var(--color-overlay) 55%, rgba(0,0,0,.6) 100%);
-}
-.hero__contenido {
-  position: relative;
-  z-index: 1;
+  justify-content: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-4);
   text-align: center;
-  padding-top: var(--espacio-7);
-  padding-bottom: var(--espacio-7);
+}
+.hero__cabecera {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--espacio-2);
+  gap: var(--espacio-1);
 }
 .hero__logo {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.7);
+  border: 2px solid var(--color-borde);
 }
 .hero__titulo {
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: .02em;
-  color: rgba(255,255,255,.85);
+  color: var(--color-acento-oscuro);
   text-transform: uppercase;
   max-width: 40ch;
+}
+.hero__figura {
+  position: relative;
+  aspect-ratio: 583 / 713;
+  /* Cabe a lo ancho desde 360 px y en alto en pantallas bajas (FR-008) */
+  width: min(100%, 22rem, calc(40svh * 583 / 713));
+}
+.hero__poster {
+  width: 100%;
+  height: 100%;
+}
+.hero__revelado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-2);
 }
 .hero__eslogan {
   font-family: var(--fuente-titulos);
   font-weight: 700;
-  font-size: clamp(2rem, 7vw, 3.4rem);
+  font-size: clamp(1.6rem, 6vw, 3rem);
   line-height: 1.15;
   max-width: 16ch;
   margin: 0;
-  text-shadow: 0 2px 18px rgba(0,0,0,.35);
+  color: var(--color-acento-oscuro);
+}
+.hero__contacto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-1);
 }
 .hero__telefono {
   display: inline-flex;
@@ -287,35 +319,15 @@ section { padding: var(--espacio-7) 0; }
   gap: .4rem;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-superficie);
+  color: var(--color-texto);
   padding: .3rem .6rem;
 }
 .hero__telefono svg { width: 1.1em; height: 1.1em; }
 .hero__horario {
   font-size: .9rem;
-  color: rgba(255,255,255,.85);
+  color: var(--color-texto-suave);
   margin: 0;
 }
-.hero__puntos {
-  position: absolute;
-  bottom: var(--espacio-3);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-  display: flex;
-  gap: .5rem;
-}
-.hero__punto {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.45);
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: background-color .2s ease, transform .2s ease;
-}
-.hero__punto.is-activo { background: var(--color-superficie); transform: scale(1.2); }
 
 @media (min-width: 768px) {
   .hero__eslogan { max-width: 22ch; }
@@ -408,7 +420,7 @@ section { padding: var(--espacio-7) 0; }
   padding: var(--espacio-3);
   box-shadow: var(--sombra-suave);
 }
-.resenas__estrellas { color: #E8A93A; letter-spacing: .1em; }
+.resenas__estrellas { color: var(--color-estrella); letter-spacing: .1em; }
 .resenas__ver-todas { display: inline-block; margin-top: var(--espacio-3); font-weight: 600; color: var(--color-acento-oscuro); }
 
 /* ---------- 10. Footer / ubicación ---------- */
@@ -464,7 +476,7 @@ section { padding: var(--espacio-7) 0; }
   grid-template-columns: 1fr 1fr;
   height: var(--alto-barra-fija);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -4px 16px rgba(0,0,0,.12);
+  box-shadow: var(--sombra-barra);
 }
 .barra-fija__boton {
   display: flex;

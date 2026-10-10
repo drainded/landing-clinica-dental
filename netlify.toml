@@ -1,0 +1,38 @@
+# Archivos de desarrollo que no deben publicarse: se responden con 404 forzado.
+# Si el despliegue es en Cloudflare Pages, el equivalente es un archivo `_redirects`
+# en la raíz con estas mismas rutas (una por línea, con estado 404), por ejemplo:
+#   /referencias/*  /404.html  404
+#   /specs/*        /404.html  404
+#   /.specify/*     /404.html  404
+#   /.claude/*      /404.html  404
+#   /SPEC.md        /404.html  404
+
+[[redirects]]
+  from = "/referencias/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/specs/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.specify/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.claude/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPEC.md"
+  to = "/404.html"
+  status = 404
+  force = true
