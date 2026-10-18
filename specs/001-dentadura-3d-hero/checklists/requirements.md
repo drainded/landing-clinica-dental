@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Dentadura 3D interactiva en el hero
+# Specification Quality Checklist: Cráneo 3D en rayos X sobre velos de luz en el hero
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-10-09
@@ -33,4 +33,5 @@
 
 - La spec nombra rutas de archivos del presupuesto/entregables solo como supuestos; el CÓMO técnico (three.js, shaders, GLB, observadores) se dejó fuera para `/speckit-plan`.
 - El umbral exacto de revelado del eslogan se difiere al plan (documentado en Assumptions).
-- El color `#0F6E6E` y los límites de peso se conservan porque son requisitos del cliente/constitución, no detalles de implementación.
+- Los límites de peso se conservan porque son requisitos del cliente/constitución, no detalles de implementación.
+- 2026-10-12 (D-17): spec revisada por el cambio de modelo (cráneo en rayos X) y de fondo (velos de luz que siguen al cursor); se retiran el contorno verde `#0F6E6E` y la deformación local. Los criterios siguen siendo medibles; queda **pendiente** de confirmar con el cliente la autoría/licencia del escaneo.

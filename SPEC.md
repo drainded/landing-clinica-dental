@@ -31,7 +31,7 @@ Pacientes de Atlacomulco y alrededores, mayoritariamente en teléfono móvil, co
 ### 2.1 Dentro del alcance
 
 - Una única página HTML estática, responsive, mobile-first, en español de México.
-- Siete bloques de contenido: hero con dentadura 3D interactiva, servicios, sobre el doctor, galería, reseñas, footer con mapa y horarios, más los elementos fijos de contacto.
+- Siete bloques de contenido: hero con cráneo 3D en rayos X sobre velos de luz interactivos, servicios, sobre el doctor, galería, reseñas, footer con mapa y horarios, más los elementos fijos de contacto.
 - Contacto por WhatsApp y por llamada telefónica.
 - Base mínima de SEO local y de compartición en redes (ver sección 10.4).
 - Despliegue en Netlify o Cloudflare Pages.
@@ -96,19 +96,19 @@ Orden vertical de la página: **Hero → Servicios → Sobre el doctor → Galer
 
 ### 4.2 Hero
 
-Sección a pantalla completa con **fondo blanco** (`--color-superficie`), sin slider ni capa oscura, y la **dentadura 3D** centrada (contorno `--color-acento`, relleno blanco). Spec: `specs/001-dentadura-3d-hero/`.
+Sección a pantalla completa con un **fondo de velos de luz** translúcidos y entrelazados (tonos de los tokens `--color-velo-*`) que se mueven con el cursor, sin slider ni capa oscura, y el **cráneo inferior 3D con aspecto de radiografía** centrado (D-17). Spec: `specs/001-dentadura-3d-hero/`.
 
 Elementos del hero:
 
 1. Logo de la clínica.
 2. `<h1>`: «Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco» (texto oscuro, siempre en el DOM).
-3. Dentadura 3D, cerrada al cargar. Con el scroll la mandíbula se abre; con el cursor/toque se deforma.
-4. Eslogan: **«La confianza en tu sonrisa comienza aquí»** y botón **«Servicios»** (ancla a §4.3): se revelan cuando la mandíbula está abierta. Sin 3D, con ahorro de datos o `prefers-reduced-motion`, se muestran siempre.
+3. Cráneo 3D en rayos X, con la mandíbula cerrada al cargar. El cráneo arranca ya acercado; las primeras acciones de scroll no desplazan la página sino que abren la mandíbula (≈ 30°, ≥ 2 s aunque el gesto sea largo) y difuminan la parte del modelo que choca con los textos; después la página sigue con normalidad (D-18). Con el cursor/toque los velos del fondo se mueven y el cráneo se inclina.
+4. Eslogan: **«La confianza en tu sonrisa comienza aquí»** y botón **«Conoce nuestros servicios»** (ancla a §4.3), juntos en el hueco de la boca abierta: se revelan cuando la mandíbula está abierta. Sin 3D, con ahorro de datos o `prefers-reduced-motion`, se muestran siempre.
 5. Botón principal **«Agende su cita»** (WhatsApp), teléfono pulsable y línea de horario resumido «Lun–Vie 9:00–19:00 · Sáb 9:00–14:00»: se mantienen visibles desde el inicio (principio II).
 
 El `<h1>` contiene nombre y ciudad por SEO y compartición; el eslogan es lo que genera la conexión con el paciente y domina visualmente cuando aparece.
 
-**Respaldo:** póster estático WebP con la dentadura cerrada (`assets/img/diente-poster.webp`), que es además el LCP. El slider de 3 fotos se retira (D-15).
+**Respaldo:** póster estático WebP con el cráneo cerrado (`assets/img/craneo-cerrado.webp`) sobre un degradado CSS de velos, que es además el LCP. El slider de 3 fotos se retira (D-15).
 
 ---
 
@@ -234,13 +234,13 @@ DENTISTALANDING/
 ├── assets/
 │   ├── img/
 │   │   ├── logo.svg
-│   │   ├── diente-poster.webp
+│   │   ├── craneo-cerrado.webp
 │   │   ├── doctor.webp
 │   │   ├── galeria-1.webp … galeria-6.webp
 │   │   └── mapa-estatico.webp
 │   ├── models/
-│   │   ├── diente.glb
-│   │   └── diente-ligero.glb
+│   │   ├── craneo.glb
+│   │   └── craneo-ligero.glb
 │   ├── fonts/            (Poppins, Inter en WOFF2)
 │   ├── js/vendor/        (three.js, GLTFLoader, MeshoptDecoder)
 │   └── og-image.jpg
@@ -402,6 +402,8 @@ Se aplican a toda la página, no a una tarea concreta.
 | 2026-10-09 | D-14 · Se permiten librerías de animación y 3D autoalojadas en `assets/js/vendor/`; se reemplaza el presupuesto de peso de §10.1 por el de la constitución v2.0.0; se enmienda RNF-02 | La identidad visual pasa a basarse en movimiento y en un modelo 3D del diente. Se carga de forma diferida, con una imagen estática de respaldo visible mientras carga y cuando no se puede mostrar el 3D (reducción de movimiento, ahorro de datos, equipo lento o sin WebGL). |
 | 2026-10-09 | D-15 · Se retira el slider de fotos del hero (y `hero-1/2/3`, overlay oscuro, RF-10 original, T-15/T-16). El hero pasa a fondo blanco con la dentadura 3D centrada; el eslogan y el botón «Servicios» se revelan al abrirse la mandíbula (siempre visibles sin 3D). Constitución v2.1.0 | La dentadura interactiva sustituye a las fotos como elemento memorable; el póster estático es el respaldo y el LCP. |
 | 2026-10-09 | D-16 · Poppins/Inter se autoalojan en WOFF2 (`assets/fonts/`); se retira Google Fonts | Criterio «sin peticiones a dominios externos», RNF-03 y menor tiempo de carga; cuentan en la carga crítica. |
+| 2026-10-12 | D-17 · Se sustituye la dentadura de contorno verde por un cráneo inferior con aspecto de rayos X (`craneo.glb`, `craneo-ligero.glb`, póster `craneo-cerrado.webp`) y el fondo blanco del hero por velos de luz translúcidos que se mueven con el cursor. El cursor ya no deforma el modelo: mueve los velos e inclina el cráneo. La mandíbula abre ≈ 30° (antes 40°) y el cráneo arranca acercado (`--escala-figura`); el scroll solo abre la mandíbula, con difuminado del modelo bajo los textos. El botón «Servicios» pasa a «Conoce nuestros servicios». Constitución v2.2.0 | Nueva dirección visual del cliente (boceto del 12/10/2026). Pendiente: confirmar la autoría/licencia del escaneo (`assets/models/README.md`). |
+| 2026-10-13 | D-18 · Se admite un *bloqueo de introducción* en el hero: las primeras acciones de scroll avanzan la apertura de la mandíbula (velocidad máxima, ≥ 2 s) en lugar de desplazar la página, una sola vez por visita y con salidas de emergencia (Tab, anclas, barra de scroll, modo estático). Constitución v2.3.0 (excepción acotada en el principio II); el hero pasa a alto fijo sin recorrido de scroll | Con el recorrido ligado a la posición de scroll, un gesto largo se saltaba la animación y la presentación perdía sentido. |
 
 ---
 

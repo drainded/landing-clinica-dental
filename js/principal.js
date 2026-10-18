@@ -27,8 +27,14 @@
   var UMBRAL_FPS_MIN = 24;       // fps medios de los primeros 3 s por debajo de los cuales se degrada
   var ANCHO_MOVIL_PX = 768;      // táctil por debajo de este ancho → nivel ligero
   var RETRASO_CARGA_MS = 200;    // respaldo si no hay requestIdleCallback
-  var RUTA_MODELO_COMPLETO = "assets/models/diente.glb";
-  var RUTA_MODELO_LIGERO = "assets/models/diente-ligero.glb";
+  var UMBRAL_REVELADO_ON = 0.5; // apertura a partir de la cual «Servicios» se puede pulsar
+  var UMBRAL_REVELADO_OFF = 0.45;
+  var BLOQUEO_VELOCIDAD = 1.25;  // progreso máximo por segundo durante el bloqueo de introducción (≥ 0,8 s en total)
+  var DISTANCIA_RUEDA = 0.9;     // alturas de ventana de rueda que equivalen a todo el progreso
+  var DISTANCIA_TOQUE = 0.6;     // alturas de ventana de arrastre táctil que equivalen a todo el progreso
+  var PASO_TECLA = 0.35;         // progreso que avanza una pulsación de Espacio / RePág
+  var RUTA_MODELO_COMPLETO = "assets/models/craneo.glb";
+  var RUTA_MODELO_LIGERO = "assets/models/craneo-ligero.glb";
 
   /* ---------- 1. Datos del negocio (sección 8 del spec — valores de prueba) ---------- */
   var NEGOCIO = {
@@ -128,6 +134,260 @@
     return tactil && window.innerWidth < ANCHO_MOVIL_PX ? "ligero" : "completo";
   }
 
+  /**
+   * Bloqueo de introducción del hero (constitución v2.3.0, principio II).
+   *
+   * Al cargar la página en lo alto, las primeras acciones de scroll (rueda, arrastre táctil o
+   * teclas) NO desplazan la página: avanzan la apertura de la mandíbula (progreso 0–1), con una
+   * velocidad máxima, de modo que un gesto largo no se salte la animación. Al llegar a 1 el
+   * bloqueo se libera y la página se desplaza con normalidad.
+   *
+   * Salidas de emergencia (nunca debe atrapar a nadie): Tab, clic en un ancla interna, cualquier
+   * desplazamiento externo (barra de scroll, buscar en la página, ancla en la URL), pasar a modo
+   * estático (reducir movimiento, 3D fallido) o cargar la página ya desplazada. Los accesos de
+   * contacto (barra fija, botón flotante, teléfono) no dependen del scroll y siguen pulsables.
+   *
+   * Al volver al inicio del todo tras haber bajado, el hero se rearma: la mandíbula se cierra y
+   * el bloqueo vuelve a abrirla (cerrada ya si el hero salió de pantalla del todo).
+   *
+   * Publica el progreso como propiedad CSS --apertura, evento dentadura:apertura y atributo
+   * data-revelado. Vive aquí y no en el módulo 3D para que el eslogan y el botón se revelen
+   * aunque el 3D tarde en cargar o falle. Devuelve la función que libera el bloqueo.
+   */
+  function publicarApertura(hero) {
+    var raiz = document.documentElement;
+    var progreso = 0;
+    var objetivo = 0;
+    var publicado = -1;
+    var eventoPublicado = -1;
+    var ultimo = 0;
+    var cuadro = 0;
+    var bloqueado = false;
+    var yTactil = null;
+    var figura = hero.querySelector(".hero__figura");
+    var clicActivo = false;
+
+    function acotar(x) { return Math.min(1, Math.max(0, x)); }
+
+    function publicar() {
+      if (Math.abs(progreso - publicado) >= 0.0005) {
+        publicado = progreso;
+        hero.style.setProperty("--apertura", progreso.toFixed(3));
+      }
+      if (Math.abs(progreso - eventoPublicado) >= 0.005 || progreso === 1 || progreso === 0) {
+        eventoPublicado = progreso;
+        document.dispatchEvent(new CustomEvent("dentadura:apertura", { detail: { progreso: progreso } }));
+      }
+      // Histéresis para que el botón no parpadee en el umbral
+      if (progreso > UMBRAL_REVELADO_ON) hero.setAttribute("data-revelado", "");
+      else if (progreso < UMBRAL_REVELADO_OFF) hero.removeAttribute("data-revelado");
+      if (clicActivo) figura.setAttribute("aria-pressed", hero.hasAttribute("data-revelado") ? "true" : "false");
+    }
+
+    function avanzar(t) {
+      cuadro = 0;
+      var dt = Math.min((t - ultimo) / 1000, 0.1);
+      ultimo = t;
+      var tope = BLOQUEO_VELOCIDAD * dt;
+      progreso += Math.max(-tope, Math.min(tope, objetivo - progreso));
+      publicar();
+      if (progreso >= 1 && objetivo >= 1) liberar();
+      else if (progreso !== objetivo) cuadro = window.requestAnimationFrame(avanzar);
+    }
+
+    function empujar(delta) {
+      if (!bloqueado) return;
+      objetivo = acotar(objetivo + delta);
+      if (!cuadro) {
+        ultimo = performance.now();
+        cuadro = window.requestAnimationFrame(avanzar);
+      }
+    }
+
+    function alRueda(e) {
+      if (e.ctrlKey) return;   // zoom del navegador
+      e.preventDefault();
+      var px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
+      empujar(px / (window.innerHeight * DISTANCIA_RUEDA));
+    }
+    function alTocar(e) {
+      yTactil = e.touches.length === 1 ? e.touches[0].clientY : null;
+    }
+    function alMoverToque(e) {
+      if (yTactil === null || e.touches.length !== 1) return;
+      var y = e.touches[0].clientY;
+      var dy = yTactil - y;
+      yTactil = y;
+      if (e.cancelable) e.preventDefault();
+      empujar(dy / (window.innerHeight * DISTANCIA_TOQUE));
+    }
+    function alTeclear(e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Tab") { liberar(); return; }   // navegar con teclado nunca se bloquea
+      var t = e.target;
+      if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
+      var paso = 0;
+      if (e.key === " ") paso = e.shiftKey ? -PASO_TECLA : PASO_TECLA;
+      else if (e.key === "PageDown") paso = PASO_TECLA;
+      else if (e.key === "PageUp") paso = -PASO_TECLA;
+      else if (e.key === "ArrowDown") paso = PASO_TECLA / 2;
+      else if (e.key === "ArrowUp") paso = -PASO_TECLA / 2;
+      else if (e.key === "End") paso = 1;
+      else if (e.key === "Home") paso = -1;
+      else return;
+      e.preventDefault();
+      empujar(paso);
+    }
+    function alDesplazar() {
+      if (window.pageYOffset > 2) liberar();   // desplazamiento externo: barra de scroll, ancla, buscar…
+    }
+    function alHacerClic(e) {
+      var el = e.target;
+      if (el && el.closest && el.closest('a[href^="#"]')) liberar();
+    }
+
+    // Al volver al inicio del todo, el hero se rearma: la mandíbula se cierra y el bloqueo de
+    // introducción vuelve a hacerla abrir. Mientras el hero está fuera de pantalla se cierra sin
+    // que se note, para que al regresar ya esté cerrada.
+    var vigilando = false;
+    var salio = false;
+
+    function alVolver() {
+      var y = window.pageYOffset;
+      if (y > 2) salio = true;
+      if (hero.getBoundingClientRect().bottom <= 0) {
+        if (progreso !== 0) { objetivo = progreso = 0; publicar(); }
+      } else if (salio && y <= 2) {
+        activar();
+      }
+    }
+
+    function vigilar() {
+      if (vigilando) return;
+      vigilando = true;
+      salio = window.pageYOffset > 2;
+      window.addEventListener("scroll", alVolver, { passive: true });
+    }
+
+    function dejarDeVigilar() {
+      if (!vigilando) return;
+      vigilando = false;
+      window.removeEventListener("scroll", alVolver);
+    }
+
+    function activar() {
+      dejarDeVigilar();
+      bloqueado = true;
+      objetivo = 0;
+      raiz.setAttribute("data-bloqueo", "");
+      window.addEventListener("wheel", alRueda, { passive: false });
+      window.addEventListener("touchstart", alTocar, { passive: true });
+      window.addEventListener("touchmove", alMoverToque, { passive: false });
+      window.addEventListener("keydown", alTeclear);
+      window.addEventListener("scroll", alDesplazar, { passive: true });
+      document.addEventListener("click", alHacerClic, true);
+      document.addEventListener("dentadura:estado", alEstado);
+      if (progreso !== objetivo) {
+        ultimo = performance.now();
+        cuadro = window.requestAnimationFrame(avanzar);
+      } else {
+        publicar();
+      }
+    }
+
+    // definitivo = true: no volver a rearmar el bloqueo (modo estático)
+    function liberar(definitivo) {
+      if (bloqueado) {
+        bloqueado = false;
+        if (cuadro) { window.cancelAnimationFrame(cuadro); cuadro = 0; }
+        window.removeEventListener("wheel", alRueda);
+        window.removeEventListener("touchstart", alTocar);
+        window.removeEventListener("touchmove", alMoverToque);
+        window.removeEventListener("keydown", alTeclear);
+        window.removeEventListener("scroll", alDesplazar);
+        document.removeEventListener("click", alHacerClic, true);
+        document.removeEventListener("dentadura:estado", alEstado);
+        raiz.removeAttribute("data-bloqueo");
+        // Si se libera antes de terminar, el módulo 3D completa la apertura a su ritmo
+        objetivo = progreso = 1;
+        publicar();
+      }
+      if (definitivo === true) dejarDeVigilar();
+      else vigilar();
+    }
+
+    function alEstado(e) {
+      if (e.detail && e.detail.estado === "estatico") liberar(true);
+    }
+
+    /*
+     * Clic (o Intro / Espacio con la figura enfocada) sobre el cráneo: abre la mandíbula y, con
+     * otro clic, la cierra. Funciona con o sin bloqueo de introducción. Si se cierra estando en
+     * lo alto de la página, el bloqueo se rearma para que el scroll vuelva a abrirla.
+     */
+    function alternar() {
+      var abrir = objetivo < 0.5;
+      if (abrir) {
+        objetivo = 1;
+      } else if (!bloqueado && window.pageYOffset <= 2) {
+        activar();   // deja objetivo = 0 y arranca la animación de cierre
+        return;
+      } else {
+        objetivo = 0;
+      }
+      if (!cuadro) {
+        ultimo = performance.now();
+        cuadro = window.requestAnimationFrame(avanzar);
+      }
+    }
+    function alClicFigura() { alternar(); }
+    function alTeclearFigura(e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      e.stopPropagation();   // que el bloqueo no lo trate como desplazamiento con Espacio
+      alternar();
+    }
+    function activarClic() {
+      if (!figura || clicActivo) return;
+      clicActivo = true;
+      figura.setAttribute("role", "button");
+      figura.setAttribute("tabindex", "0");
+      figura.setAttribute("aria-label", "Abrir o cerrar la mandíbula");
+      figura.setAttribute("aria-pressed", hero.hasAttribute("data-revelado") ? "true" : "false");
+      figura.addEventListener("click", alClicFigura);
+      figura.addEventListener("keydown", alTeclearFigura);
+      document.addEventListener("dentadura:estado", alEstadoClic);
+    }
+    function desactivarClic() {
+      if (!figura || !clicActivo) return;
+      clicActivo = false;
+      ["role", "tabindex", "aria-label", "aria-pressed"].forEach(function (a) { figura.removeAttribute(a); });
+      figura.removeEventListener("click", alClicFigura);
+      figura.removeEventListener("keydown", alTeclearFigura);
+      document.removeEventListener("dentadura:estado", alEstadoClic);
+    }
+    function alEstadoClic(e) {
+      if (e.detail && e.detail.estado === "estatico") liberarParaSiempre();
+    }
+
+    function liberarParaSiempre() { liberar(true); desactivarClic(); }
+
+    if (raiz.dataset.hero !== "animado") return liberarParaSiempre;
+
+    activarClic();
+
+    if (window.pageYOffset > 2) {
+      // Página cargada ya desplazada (recarga, ancla): sin bloqueo y con la boca abierta
+      objetivo = progreso = 1;
+      publicar();
+      vigilar();
+      return liberarParaSiempre;
+    }
+
+    activar();
+    return liberarParaSiempre;
+  }
+
   function iniciarDentadura() {
     var raiz = document.documentElement;
     if (raiz.dataset.hero !== "animado" || esEquipoModesto()) {
@@ -142,8 +402,24 @@
       return;
     }
 
+    var liberarBloqueo = publicarApertura(hero);
+
     var nivel = elegirNivel();
     var rutaModelo = nivel === "ligero" ? RUTA_MODELO_LIGERO : RUTA_MODELO_COMPLETO;
+
+    var instancia = null;
+
+    // Si la persona activa «reducir movimiento» con la página abierta, se vuelve al póster
+    if (window.matchMedia) {
+      var reducir = window.matchMedia("(prefers-reduced-motion: reduce)");
+      var alCambiar = function (e) {
+        if (!e.matches) return;
+        if (instancia) instancia.destruir();
+        raiz.dataset.hero = "estatico";
+        liberarBloqueo();
+      };
+      if (reducir.addEventListener) reducir.addEventListener("change", alCambiar);
+    }
 
     function cargar() {
       import("./dentadura.js")
@@ -155,6 +431,9 @@
             rutaModelo: rutaModelo,
             umbralFps: UMBRAL_FPS_MIN
           });
+        })
+        .then(function (resultado) {
+          instancia = resultado;
         })
         .catch(function () {
           raiz.dataset.hero = "estatico";

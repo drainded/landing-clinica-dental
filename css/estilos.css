@@ -46,6 +46,15 @@
   --color-acento-suave: rgba(15, 110, 110, .08);
   --color-estrella: #E8A93A;
 
+  /* Hero: velos de luz y radiografía (los lee también js/dentadura.js) */
+  --color-velo-fondo: #EEF8FB;
+  --color-velo-1: #8ED2E4;
+  --color-velo-2: #2F86B7;
+  --color-rayosx: #0D2B57;
+  --color-rayosx-luz: #A9BBD8;
+  --velo-1-suave: rgba(142, 210, 228, .55);
+  --velo-2-suave: rgba(47, 134, 183, .30);
+
   /* Tipografía */
   --fuente-titulos: 'Poppins', system-ui, -apple-system, sans-serif;
   --fuente-texto: 'Inter', system-ui, -apple-system, sans-serif;
@@ -70,6 +79,12 @@
 
   /* Alto de la barra fija de contacto en móvil */
   --alto-barra-fija: 60px;
+
+  /* Alto del header en móvil (no es fijo): el hero mide el resto de la pantalla para verse completo al cargar */
+  --alto-header-movil: 76px;
+
+  /* Escala con la que arranca el cráneo en el hero (tamaño del último acercamiento) */
+  --escala-figura: 1.6;
 }
 
 /* ---------- 2. Reinicio mínimo ---------- */
@@ -244,25 +259,50 @@ section { padding: var(--espacio-7) 0; }
 }
 
 /* ---------- 5. Hero ---------- */
-/* Modo base = estático: póster, eslogan y «Servicios» visibles, flujo normal.
-   El modo animado (data-hero="animado") se añade en las historias US3/US4. */
+/* Modo base = estático: póster del cráneo cerrado sobre un degradado de velos, eslogan y
+   «Servicios» visibles, flujo normal. Con data-hero="animado" js/dentadura.js dibuja un canvas
+   (velos que siguen al cursor + radiografía 3D) detrás del contenido, y la mandíbula se abre
+   con el scroll (--apertura la publica js/principal.js). */
 .hero {
   position: relative;
-  background: var(--color-superficie);
+  padding: 0;
   color: var(--color-texto);
 }
 .hero__escenario {
   position: relative;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: calc(100svh - var(--alto-barra-fija) - var(--alto-header-movil));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto;
+  justify-items: center;
   gap: var(--espacio-2);
-  padding: var(--espacio-3) var(--espacio-3) var(--espacio-4);
+  padding: var(--espacio-3) var(--espacio-3) var(--espacio-2);
   text-align: center;
+  background-color: var(--color-velo-fondo);
+  background-image:
+    linear-gradient(160deg, transparent 8%, var(--velo-1-suave) 34%, transparent 54%),
+    linear-gradient(200deg, transparent 30%, var(--velo-2-suave) 62%, transparent 84%),
+    linear-gradient(100deg, var(--velo-1-suave), transparent 42%);
 }
+.hero__escenario > :not(.hero__canvas) { grid-column: 1; }
+.hero__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity .4s ease;
+  pointer-events: none;
+  touch-action: pan-y;
+}
+.hero__canvas.is-listo { opacity: 1; }
+
 .hero__cabecera {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -281,18 +321,43 @@ section { padding: var(--espacio-7) 0; }
   color: var(--color-acento-oscuro);
   text-transform: uppercase;
   max-width: 40ch;
+  text-shadow: 0 0 .25rem var(--color-superficie);
 }
 .hero__figura {
   position: relative;
-  aspect-ratio: 583 / 713;
-  /* Cabe a lo ancho desde 360 px y en alto en pantallas bajas (FR-008) */
-  width: min(100%, 22rem, calc(40svh * 583 / 713));
+  grid-row: 2;
+  width: 100%;
+  max-width: 44rem;
+  min-height: 0;
+  height: min(56svh, 32rem);
+}
+html[data-hero="animado"] .hero__figura { height: auto; }
+/* El cráneo arranca ya «acercado»; el póster y el 3D comparten esta escala (js/dentadura.js mide el recuadro ya escalado) */
+.hero__figura {
+  transform: scale(var(--escala-figura));
+  /* el póster es opaco y blanco: multiplicar deja ver los velos a través del hueso
+     (va en la figura, no en la imagen, porque transform crea su propio contexto de apilamiento) */
+  mix-blend-mode: multiply;
 }
 .hero__poster {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  transition: opacity .35s ease;
 }
+.hero__figura.is-3d .hero__poster { opacity: 0; }
+/* Clic sobre el cráneo: abre/cierra la mandíbula (js/principal.js añade role="button") */
+.hero__figura[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hero__figura[role="button"]:focus-visible {
+  outline: 3px solid var(--color-acento-oscuro);
+  outline-offset: -3px;
+  border-radius: 8px;
+}
+
 .hero__revelado {
+  grid-row: 3;
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -301,13 +366,17 @@ section { padding: var(--espacio-7) 0; }
 .hero__eslogan {
   font-family: var(--fuente-titulos);
   font-weight: 700;
-  font-size: clamp(1.6rem, 6vw, 3rem);
+  font-size: clamp(1.15rem, 3.4vw, 1.7rem);
   line-height: 1.15;
   max-width: 16ch;
   margin: 0;
   color: var(--color-acento-oscuro);
+  text-shadow: 0 0 .3rem var(--color-superficie);
 }
+.hero__servicios svg { width: 1.1em; height: 1.1em; }
 .hero__contacto {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -317,6 +386,7 @@ section { padding: var(--espacio-7) 0; }
   display: inline-flex;
   align-items: center;
   gap: .4rem;
+  min-height: 44px;
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-texto);
@@ -327,10 +397,64 @@ section { padding: var(--espacio-7) 0; }
   font-size: .9rem;
   color: var(--color-texto-suave);
   margin: 0;
+  text-shadow: 0 0 .25rem var(--color-superficie);
 }
 
+/* Modo animado: el escenario mide exactamente el resto de la pantalla. La apertura de la mandíbula no
+   depende de la posición de scroll sino del bloqueo de introducción de js/principal.js (--apertura). */
+html[data-hero="animado"] .hero__escenario {
+  height: calc(100svh - var(--alto-barra-fija) - var(--alto-header-movil));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+/* Sobre la figura: eslogan y botón juntos, en la parte baja de la boca abierta */
+html[data-hero="animado"] .hero__revelado {
+  grid-row: 2;
+  align-self: stretch;
+  justify-content: center;
+  gap: .5rem;
+  padding-top: 10%;
+}
+html[data-hero="animado"] .hero__contacto { grid-row: 3; }
+
+/* Revelado del eslogan y «Servicios» ligado a --apertura (0–1, lo escribe js/principal.js).
+   Solo opacity/transform; el botón sigue en el orden de tabulación y se muestra con foco. */
+html[data-hero="animado"] .hero__revelado {
+  --rev-eslogan: clamp(0, (var(--apertura, 0) - 0.3) / 0.3, 1);
+  --rev-boton: clamp(0, (var(--apertura, 0) - 0.4) / 0.3, 1);
+  pointer-events: none;
+}
+html[data-hero="animado"] .hero__eslogan {
+  opacity: var(--rev-eslogan);
+  transform: translateY(calc((1 - var(--rev-eslogan)) * 18px));
+}
+html[data-hero="animado"] .hero__servicios {
+  opacity: var(--rev-boton);
+  transform: translateY(calc((1 - var(--rev-boton)) * 14px));
+  pointer-events: none;
+}
+html[data-hero="animado"] #inicio[data-revelado] .hero__servicios,
+html[data-hero="animado"] .hero__servicios:focus-visible {
+  pointer-events: auto;
+}
+html[data-hero="animado"] .hero__servicios:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-height: 700px) {
+  .hero__escenario { gap: var(--espacio-1); padding-top: var(--espacio-2); }
+  .hero__logo { width: 48px; height: 48px; }
+  .hero__titulo { font-size: .85rem; }
+}
 @media (min-width: 768px) {
-  .hero__eslogan { max-width: 22ch; }
+  .hero__eslogan { max-width: 30ch; }
+}
+@media (min-width: 1024px) {
+  /* En escritorio la boca abierta es más baja: subir el grupo para ver los dientes de arriba y de abajo */
+  html[data-hero="animado"] .hero__revelado { padding-top: 5%; padding-bottom: 0; }
+  .hero__eslogan { max-width: 40ch; }
+  .hero__escenario { min-height: calc(100svh - var(--alto-header)); }
+  html[data-hero="animado"] .hero__escenario { height: calc(100svh - var(--alto-header)); }
 }
 
 /* ---------- 6. Servicios ---------- */

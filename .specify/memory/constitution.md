@@ -1,6 +1,47 @@
 <!--
 Sync Impact Report
-- Version change: 2.0.0 → 2.1.0 (MINOR: guía ampliada y precisada; no se elimina ni se redefine
+- Version change: 2.2.0 → 2.3.0 (MINOR: se admite una excepción acotada a la regla de no
+  bloquear el scroll; no se elimina el principio II ni se debilita el acceso a contacto)
+- Modified principles:
+  - II. Contacto primero: se permite UN «bloqueo de introducción» en el hero (las primeras
+    acciones de scroll, al cargar la página en lo alto, avanzan una animación con velocidad
+    máxima en lugar de desplazar la página, para que un gesto largo no se la salte). Condiciones
+    obligatorias: solo hasta completar la animación (y al regresar al inicio); el contacto
+    (barra fija, botón flotante, teléfono) y los enlaces siguen pulsables; salidas de emergencia
+    (Tab, anclas internas, desplazamiento externo, modo estático, carga ya desplazada); nunca con
+    movimiento reducido o sin 3D; sin overflow:hidden en <html>/<body> ni scroll falso.
+  - Resto de principios: sin cambios.
+- Added sections: ninguna
+- Removed sections: ninguna
+- Follow-up TODOs:
+  - SPEC.md: D-18 registrada.
+  - Verificar el bloqueo en móvil real (arrastre táctil) y con lectores de pantalla (principio IX).
+-->
+<!--
+Sync Impact Report
+- Version change: 2.1.0 → 2.2.0 (MINOR: se redefine el aspecto del hero y del modelo 3D dentro de
+  los principios I y V; no se elimina ningún principio)
+- Modified principles:
+  - I. Identidad y contenido: los colores del hero 3D (radiografía, velos de luz y dientes) se
+    leen en tiempo de ejecución de los tokens --color-rayosx, --color-rayosx-luz, --color-velo-*
+    y --color-superficie (antes solo --color-acento para el contorno); el hero ya no es blanco:
+    su fondo son velos de luz (tokens --color-velo-*), sin capa overlay oscura.
+  - V. Modelo 3D: la dentadura de contorno verde y relleno blanco se sustituye por un cráneo
+    inferior (maxilar + mandíbula con dientes) con aspecto de radiografía sobre velos de luz que
+    siguen al cursor; shaders propios (rayos X multiplicativo, dientes con iluminación fija,
+    velos), sin texturas ni mapa de entorno ni luces de three.js; GLB ≤ 400 KB (209 / 74 KB);
+    la autoría del modelo nuevo queda pendiente de confirmar (ver assets/models/README.md).
+  - VI. Adaptación al dispositivo: sin cambios de fondo (el nivel (a) usa el póster estático).
+- Added sections: ninguna
+- Removed sections: ninguna
+- Follow-up TODOs:
+  - Confirmar con el autor el origen y la licencia del escaneo de assets/models/craneo*.glb
+    antes de publicar.
+  - SPEC.md: D-17 registrada (sustitución del modelo y del fondo del hero).
+-->
+<!--
+Sync Impact Report
+- Version change (histórico): 2.0.0 → 2.1.0 (MINOR: guía ampliada y precisada; no se elimina ni se redefine
   ningún principio de forma incompatible)
 - Modified principles:
   - I. Identidad y contenido: el color del contorno 3D se lee de --color-acento en tiempo de
@@ -33,9 +74,10 @@ Sync Impact Report
 ### I. Identidad y contenido (NON-NEGOTIABLE)
 Los tokens CSS de `:root` (colores, tipografía, espaciado) MUST ser la única fuente de estilo;
 ninguna regla CSS ni código JS (incluidos los shaders del 3D) puede contener un color literal:
-el color del contorno de la dentadura MUST leerse en tiempo de ejecución del token
-`--color-acento`. El hero tiene fondo blanco (`--color-superficie`) con texto oscuro y sin capa
-overlay. Los datos del negocio (teléfono, WhatsApp, horario, dirección, coordenadas) MUST vivir
+los colores del hero 3D (tinte de la radiografía `--color-rayosx`, reflejo de los dientes
+`--color-rayosx-luz`, dientes `--color-superficie` y velos de luz `--color-velo-fondo`,
+`--color-velo-1`, `--color-velo-2`) MUST leerse en tiempo de ejecución de esos tokens. El hero
+tiene fondo de velos de luz (tokens `--color-velo-*`) con texto oscuro y sin capa overlay oscura. Los datos del negocio (teléfono, WhatsApp, horario, dirección, coordenadas) MUST vivir
 en un único bloque de constantes en `js/principal.js`, y los datos literales del `<head>` (title,
 Open Graph, JSON-LD) MUST mantenerse sincronizados con él. La identidad actual (paleta,
 Poppins/Inter, logo «HR») se conserva salvo que una spec pida cambiarla. Está prohibido publicar
@@ -49,11 +91,24 @@ El acceso a contacto MUST estar visible y funcional en todo momento: barra fija 
 («Llamar» y «WhatsApp») en móvil, botón flotante de WhatsApp en escritorio y teléfono pulsable
 (`tel:`). Nunca se muestran a la vez la barra y el botón flotante. Todos los enlaces `wa.me`
 usan el mismo mensaje prellenado. Ninguna animación, transición ni efecto 3D puede taparlo,
-retrasarlo ni bloquear el scroll nativo. Todo cambio MUST preservar la funcionalidad existente
+retrasarlo ni bloquear el scroll nativo, con **una única excepción**: el *bloqueo de introducción*
+del hero. Al cargar la página en lo alto, las primeras acciones de scroll (rueda, arrastre táctil,
+teclas de desplazamiento) pueden avanzar la animación de entrada del hero, con una velocidad
+máxima, en lugar de desplazar la página; así un gesto largo no se salta la presentación. El bloqueo
+MUST: (1) terminar al completarse la animación (unos segundos como máximo) y volver a armarse solo
+al regresar al inicio del todo tras haber bajado (la mandíbula se cierra y se vuelve a abrir); (2) no tapar ni retrasar el contacto: la barra fija, el botón flotante, el teléfono y
+los enlaces siguen visibles y pulsables durante el bloqueo; (3) liberarse de inmediato con la
+navegación por teclado (Tab), con un clic en un ancla interna, con cualquier desplazamiento externo
+(barra de scroll, buscar en la página, ancla en la URL), al pasar a modo estático y si la página se
+carga ya desplazada; (4) no activarse con `prefers-reduced-motion`, ahorro de datos, equipo lento
+ni sin 3D; (5) implementarse interceptando los eventos de entrada, nunca con `overflow: hidden` en
+`<html>`/`<body>` ni con un scroll simulado; (6) no interceptar el zoom del navegador. Fuera de
+este caso el scroll nativo es siempre libre. Todo cambio MUST preservar la funcionalidad existente
 (anclas, inyección por `data-campo`, datos del hero). El slider de fotos fue retirado por la
 decisión D-15 de `SPEC.md` y no forma parte de la funcionalidad a preservar.
 Razón: es el objetivo del proyecto y el público, mayoritariamente móvil con 4G, prefiere llamar
-o escribir.
+o escribir. La excepción existe porque la animación de entrada pierde todo su sentido si un gesto
+largo la salta, y se acota para que nunca atrape a la persona ni retrase el contacto.
 
 ### III. Presupuesto de peso
 Se mide el peso transferido, comprimido.
@@ -80,15 +135,15 @@ analítica ni cookies. Fuera de lo anterior, el proyecto sigue siendo HTML, CSS 
 build ni frameworks.
 
 ### V. Modelo 3D
-El hero MUST mostrar una dentadura humana (maxilar y mandíbula con dientes y encías) de
-geometría original, entregada como GLB comprimido con meshopt de 400 KB como máximo (versión
-completa y versión ligera para móvil), con hasta ~50 000 triángulos en escritorio y ~15 000 en
-móvil (el contorno duplica los dibujados). El modelo se renderiza con shaders propios: relleno
-blanco y contorno de grosor constante en píxeles en espacio de pantalla, sin texturas, sin mapa
-de entorno y sin iluminación; el material `KHR_materials_unlit` del GLB se sustituye por ellos.
-Por ser geometría original no requiere licencia de terceros, pero su autoría MUST quedar
-documentada. Se carga de forma diferida, con un póster estático WebP con transparencia (máximo
-60 KB) visible mientras carga y siempre que el 3D no pueda mostrarse.
+El hero MUST mostrar un cráneo inferior humano (maxilar y mandíbula con dientes) entregado como
+GLB comprimido con meshopt de 400 KB como máximo (versión completa y versión ligera para móvil),
+con hasta ~50 000 triángulos en escritorio y ~15 000 en móvil. Se renderiza con aspecto de
+radiografía sobre un fondo de velos de luz translúcidos que se mueven con el cursor, con shaders
+propios (hueso por mezcla multiplicativa, dientes blancos con iluminación fija propia, velos
+procedimentales), sin texturas, sin mapa de entorno y sin luces de three.js; los materiales del
+GLB se sustituyen por ellos. La autoría y la licencia del modelo MUST quedar documentadas en
+`assets/models/README.md` y confirmadas antes de publicar. Se carga de forma diferida, con un
+póster estático WebP (máximo 60 KB) visible mientras carga y siempre que el 3D no pueda mostrarse.
 
 ### VI. Adaptación al dispositivo
 Tres niveles:
