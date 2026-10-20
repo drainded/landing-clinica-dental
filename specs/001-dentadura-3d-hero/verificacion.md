@@ -10,7 +10,7 @@
 | T031 | ✅ parcial | 1440×800: «Agende su cita», teléfono y botón flotante visibles con el hero cerrado y con la mandíbula abierta, sin solaparse. 1280×760 (apertura 0,73): eslogan, botón, contacto y flotante visibles. 360×640: con el hero cerrado, contacto y barra fija visibles (barra en 580–640 px, CTA 418–481). **Falta**: 360 px con apertura 50 %/100 % en 3D real (el panel degradó a estático, ver abajo). |
 | T036 | ⚠️ parcial | Modo estático forzado por la guardia de fps en 360 px: layout correcto, sin scroll horizontal, eslogan y botón visibles en flujo normal. **Falta**: reduced-motion real, GLB bloqueado, WebGL desactivado, pérdida de contexto. |
 | T037 | ✅ peso · ⏳ triángulos | Ver «Peso». 0 peticiones a otros dominios (`performance.getEntriesByType('resource')` y `grep` de `googleapis`/`gstatic`/`cdn.` sin coincidencias). Triángulos sin medir. |
-| T041 | ✅ parcial | Sin colores literales fuera de `:root` en `css/estilos.css` (todos entre las líneas 36–75) ni en `js/dentadura.js`. Licencias: `assets/js/vendor/LICENSE-three.txt` y `assets/fonts/LICENSE.txt` presentes. **Pendiente**: autoría del modelo (T047). |
+| T041 | ✅ parcial | Sin colores literales fuera de `:root` en `css/estilos.css` (todos entre las líneas 36–75) ni en `js/dentadura.js`. Licencias: `assets/js/vendor/LICENSE-three.txt` y `assets/fonts/LICENSE.txt` presentes. Autoría del modelo confirmada el 2026-10-20 (T047). |
 
 ## Peso (bytes sin comprimir, servidor local)
 
@@ -58,7 +58,16 @@ Navegador integrado, 1280×760 y 360×640 (táctil emulado):
 - **Refrescar**: un arrastre hacia abajo (> 1,5 px) con la boca cerrada y la página en lo alto ya no se intercepta, así que el navegador puede refrescar. Probado con eventos táctiles sintéticos: `defaultPrevented = false` y apertura sin cambios. **Falta confirmarlo con el dedo en el móvil.**
 - **Deslizamiento rápido**: al soltar se añade un impulso (velocidad × 400 ms, mínimo 0,3 px/ms). Sintético: 20 px en 16 ms → apertura 0,81 (antes ≈ 0,05); un arrastre lento y corto sigue sin impulso (0,026).
 
+### Confirmación de las correcciones en el móvil real — 2026-10-19
+
+Mismo OnePlus Nord CE 3 Lite 5G:
+
+- Horizontal: ✅ se ve el hero completo y se puede bajar.
+- Refrescar: ✅ con el cráneo cerrado y en lo alto actualiza la página. También actualiza a veces con el cráneo **abierto**: es el gesto nativo del navegador al estar en lo alto con el bloqueo ya liberado (comportamiento esperado, no se intercepta).
+- Deslizamiento rápido: ✅ un solo gesto abre la mandíbula.
+- Toque para abrir/cerrar: ✅ sigue bien.
+
 ## Sin verificar (requiere dispositivo real o herramientas que no se han instalado)
 
 - T038 Lighthouse, T039 (resto de anchos, zoom 200 %, Tab), T042 y T050 (móvil real, táctil, lector de pantalla), recuento de triángulos, 3D a 360 px con apertura, encuadre póster↔3D a 360 px (en la captura del póster y del 3D a 360 px la figura se ve con distinto tamaño: revisar en móvil real).
-- T047 y T048 dependen del cliente.
+- T048 depende del cliente.

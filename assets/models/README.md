@@ -11,8 +11,8 @@ El póster estático que corresponde a estos modelos es `assets/img/craneo-cerra
 
 ## Autoría y licencia
 
-- Modelo entregado por el autor del proyecto el 12/10/2026 (`modelo-craneo-rayosx-dientes-alineados.zip`). Su demo de referencia (`referencias/demo-rayosx.html`) lo describe como «modelo escaneado».
-- Modelo actual (`modelo-craneo-rayosx-dientes-alineados.zip`) creados por drainded el 12/10/2026 con Claude.
+- Modelo actual (`modelo-craneo-rayosx-dientes-alineados.zip`, de donde salen `craneo.glb` y `craneo-ligero.glb`): creado por drainded el 12/10/2026 con Claude.
+- **Autoría confirmada** por el titular del proyecto el 20/10/2026 (T047). La demo de referencia (`referencias/demo-rayosx.html`) lo llamaba «modelo escaneado»; no se debe presentar así.
 - Reemplaza a `diente.glb` / `diente-ligero.glb` (creados por drainded el 09/10/2026 con Claude), retirados el 12/10/2026 (decisión D-17 de `SPEC.md`).
 
 ## Estructura del modelo
