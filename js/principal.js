@@ -26,7 +26,7 @@
   var UMBRAL_NUCLEOS = 2;
   var UMBRAL_FPS_MIN = 24;       // fps medios de los primeros 3 s por debajo de los cuales se degrada
   var ANCHO_MOVIL_PX = 768;      // táctil por debajo de este ancho → nivel ligero
-  var RETRASO_CARGA_MS = 200;    // respaldo si no hay requestIdleCallback
+  var RETRASO_3D_TRAS_CARGA_MS = 2000; // espera tras el evento load antes de cargar three.js y el modelo (el póster se ve mientras tanto)
   var UMBRAL_REVELADO_ON = 0.5; // apertura a partir de la cual «Servicios» se puede pulsar
   var UMBRAL_REVELADO_OFF = 0.45;
   var BLOQUEO_VELOCIDAD = 1.25;  // progreso máximo por segundo durante el bloqueo de introducción (≥ 0,8 s en total)
@@ -480,12 +480,16 @@
         });
     }
 
-    // Tras el primer pintado, para no competir con el LCP (el póster)
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(cargar);
-    } else {
-      setTimeout(cargar, RETRASO_CARGA_MS);
+    // Después de la carga y con el navegador libre, para no competir con el LCP (el póster)
+    // ni con el resto de la página: compilar shaders y leer el modelo ocupa el hilo principal.
+    function programarCarga() {
+      window.setTimeout(function () {
+        if (window.requestIdleCallback) window.requestIdleCallback(cargar);
+        else cargar();
+      }, RETRASO_3D_TRAS_CARGA_MS);
     }
+    if (document.readyState === "complete") programarCarga();
+    else window.addEventListener("load", programarCarga, { once: true });
   }
 
   /* ---------- 4. Inicio ---------- */

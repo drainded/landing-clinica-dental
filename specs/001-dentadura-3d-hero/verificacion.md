@@ -67,6 +67,22 @@ Mismo OnePlus Nord CE 3 Lite 5G:
 - Deslizamiento rápido: ✅ un solo gesto abre la mandíbula.
 - Toque para abrir/cerrar: ✅ sigue bien.
 
+## Lighthouse móvil (T038, E9) — 2026-10-20
+
+Lighthouse 12.8.2 (Chrome del PC, headless, perfil móvil por defecto: Moto G Power, 4G lenta simulada, CPU ×4) contra un servidor de prueba que imita a Netlify (Brotli + caché), `http://localhost:5180/`. WebGL por software, así que el coste del 3D es mayor que en un móvil real. 0 peticiones a otros dominios en todas las corridas.
+
+| Corrida | Rendimiento | Accesibilidad | Prácticas | SEO | FCP | LCP | TBT | CLS |
+|---|---|---|---|---|---|---|---|---|
+| Servidor de Python (sin compresión ni caché) | 39 | 96 | 100 | 100 | 3,1 s | 7,1 s | 1 650 ms | 0 |
+| Con compresión, antes de los arreglos | 89 | 96 | 100 | 100 | 1,0 s | 1,7 s | 440 ms | 0,011 |
+| Tras arreglos de accesibilidad y fuente (2 corridas) | 91 · 73 | 100 | 100 | 100 | 0,8 · 1,3 s | 1,7 · 2,3 s | 370 · 1 390 ms | 0,01 · 0 |
+| Tras retrasar el 3D 2 s después de `load` (2 corridas) | 100 · 85 | 100 | 100 | 100 | 0,8 · 1,1 s | 1,7 s | 0 · 580 ms | 0,01 · 0 |
+
+- **Arreglos hechos**: contraste de los botones de WhatsApp (blanco sobre `#25D366` = 1,98:1 → `--color-whatsapp` `#11803D`, 5,0:1), `aria-label` del logo que ahora contiene el texto visible, precarga de Poppins 600 (quita el desplazamiento de diseño por el cambio de fuente), cabeceras de caché de 1 día en `netlify.toml` y arranque del 3D 2 s después del evento `load` (`RETRASO_3D_TRAS_CARGA_MS`, `js/principal.js`).
+- **Resultado**: Accesibilidad, Prácticas y SEO = 100 de forma estable. LCP ≤ 2,3 s (el póster es el elemento LCP) y CLS ≈ 0 en todas las corridas con compresión. **Rendimiento ≥ 90 no es estable**: oscila entre 73 y 100 según si la inicialización del 3D cae dentro de la ventana de medición (TBT de 0 a 1 390 ms). Sin el 3D en la ventana, 100.
+- **Peso (transferencia con Brotli)**: carga crítica ≈ 112 KB; con 3D ≈ 317 KB en total (bundle de three.js 134 KB comprimido).
+- **Pendiente**: repetir en el sitio ya publicado (Netlify) y en el móvil real con Lighthouse de Chrome (PageSpeed Insights); si el TBT sigue siendo el punto débil, subir el retraso del 3D o iniciar al primer gesto.
+
 ## Sin verificar (requiere dispositivo real o herramientas que no se han instalado)
 
 - T038 Lighthouse, T039 (resto de anchos, zoom 200 %, Tab), T042 y T050 (móvil real, táctil, lector de pantalla), recuento de triángulos, 3D a 360 px con apertura, encuadre póster↔3D a 360 px (en la captura del póster y del 3D a 360 px la figura se ve con distinto tamaño: revisar en móvil real).

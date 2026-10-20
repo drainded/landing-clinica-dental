@@ -36,3 +36,20 @@
   to = "/404.html"
   status = 404
   force = true
+
+# Caché de activos: el HTML se revalida siempre; el resto se guarda un día (los archivos no llevan hash
+# en el nombre, así que no se usa `immutable`). Netlify ya comprime el texto con Brotli/gzip.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

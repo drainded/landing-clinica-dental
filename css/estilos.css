@@ -39,8 +39,8 @@
   --color-texto-suave: #5A5A5A;
   --color-acento: #0F6E6E;
   --color-acento-oscuro: #0B5252;
-  --color-whatsapp: #25D366;
-  --color-whatsapp-oscuro: #1DA851;
+  --color-whatsapp: #11803D;   /* verde de WhatsApp oscurecido: texto blanco con contraste ≥ 4,5:1 (Lighthouse) */
+  --color-whatsapp-oscuro: #0D6A32;
   --color-overlay: rgba(0, 0, 0, .45);
   --color-borde: rgba(15, 110, 110, .18);
   --color-acento-suave: rgba(15, 110, 110, .08);
