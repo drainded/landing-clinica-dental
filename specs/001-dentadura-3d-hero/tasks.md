@@ -174,7 +174,7 @@ Sitio estático plano: `index.html`, `css/estilos.css`, `js/`, `assets/` (ver "P
 - [X] T052 Correcciones de la prueba en móvil real (2026-10-19): hero en horizontal bajo (`css/estilos.css`, `apaisadoBajo` en `js/principal.js`), tirar hacia abajo para refrescar y impulso al deslizar rápido. Verificadas en el panel y confirmadas en el móvil real el 2026-10-19.
 - [ ] T053 Rediseñar el hero estático (movimiento reducido, ahorro de datos y equipos modestos), hoy un póster con textos sin diseño propio, y revisar la detección de ahorro de datos (`saveData`) en Chrome Android.
 - [X] T047 **Confirmar el origen del modelo** y completar `assets/models/README.md` (principio V). Autoría confirmada por el titular del proyecto el 2026-10-20 (creado por drainded con Claude, no es un escaneo de terceros); ya no bloquea la publicación.
-- [X] T054 Área de clic acotada al cráneo (FR-018): `sobreModelo` en `js/dentadura.js` (vértices proyectados), `detectorModelo` y cursor `is-sobre-modelo` en `js/principal.js`/`css/estilos.css`. Verificada en el panel; falta confirmarla con el dedo en el móvil.
+- [X] T054 Área de clic acotada al cráneo (FR-018): `sobreModelo` en `js/dentadura.js` (vértices proyectados), `detectorModelo` y cursor `is-sobre-modelo` en `js/principal.js`/`css/estilos.css`. Verificada en el panel y confirmada en el móvil real el 2026-10-20.
 - [ ] T048 Afinar el diseño con el cliente sobre el boceto (tamaño del cráneo en escritorio, intensidad de los velos, ubicación del eslogan) y, si se desea un encuadre exacto póster ↔ 3D, regenerar `craneo-cerrado.webp` desde una captura del propio 3D.
 
 ---

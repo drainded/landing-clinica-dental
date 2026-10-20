@@ -86,7 +86,7 @@ Lighthouse 12.8.2 (Chrome del PC, headless, perfil móvil por defecto: Moto G Po
 ## Área de clic acotada al cráneo (T054) — 2026-10-20
 
 Navegador integrado, 1280×760: el mapa de aciertos (rejilla 40×16 sobre el escenario, ratón) dibuja la silueta del cráneo con ≈ 44 % de la rejilla dentro y el resto vacío. Clic a 40 px de la esquina y en la esquina opuesta: apertura sin cambios (0). Clic sobre los dientes: abre; segundo clic: cierra. Un clic sin puntero (`detail = 0`, como un lector de pantalla) alterna siempre. Cursor de mano solo sobre el cráneo. Coste de cada comprobación ≈ 2 ms. Consola sin errores.
-Sin comprobar: toque físico en el móvil (el área se amplía 14 px para el dedo) y con la mandíbula abierta en móvil.
+Móvil real (OnePlus Nord CE 3 Lite, 2026-10-20): el área de toque funciona bien (se amplía 14 px para el dedo).
 
 ## Sin verificar (requiere dispositivo real o herramientas que no se han instalado)
 
