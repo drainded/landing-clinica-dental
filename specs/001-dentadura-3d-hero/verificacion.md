@@ -83,6 +83,11 @@ Lighthouse 12.8.2 (Chrome del PC, headless, perfil móvil por defecto: Moto G Po
 - **Peso (transferencia con Brotli)**: carga crítica ≈ 112 KB; con 3D ≈ 317 KB en total (bundle de three.js 134 KB comprimido).
 - **Pendiente**: repetir en el sitio ya publicado (Netlify) y en el móvil real con Lighthouse de Chrome (PageSpeed Insights); si el TBT sigue siendo el punto débil, subir el retraso del 3D o iniciar al primer gesto.
 
+## Área de clic acotada al cráneo (T054) — 2026-10-20
+
+Navegador integrado, 1280×760: el mapa de aciertos (rejilla 40×16 sobre el escenario, ratón) dibuja la silueta del cráneo con ≈ 44 % de la rejilla dentro y el resto vacío. Clic a 40 px de la esquina y en la esquina opuesta: apertura sin cambios (0). Clic sobre los dientes: abre; segundo clic: cierra. Un clic sin puntero (`detail = 0`, como un lector de pantalla) alterna siempre. Cursor de mano solo sobre el cráneo. Coste de cada comprobación ≈ 2 ms. Consola sin errores.
+Sin comprobar: toque físico en el móvil (el área se amplía 14 px para el dedo) y con la mandíbula abierta en móvil.
+
 ## Sin verificar (requiere dispositivo real o herramientas que no se han instalado)
 
 - T038 Lighthouse, T039 (resto de anchos, zoom 200 %, Tab), T042 y T050 (móvil real, táctil, lector de pantalla), recuento de triángulos, 3D a 360 px con apertura, encuadre póster↔3D a 360 px (en la captura del póster y del 3D a 360 px la figura se ve con distinto tamaño: revisar en móvil real).

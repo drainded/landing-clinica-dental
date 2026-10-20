@@ -36,9 +36,15 @@
   var IMPULSO_TOQUE_MS = 400;   // al soltar un deslizamiento rápido, el dedo «sigue» este tiempo a su última velocidad
   var VELOCIDAD_MIN_TOQUE = 0.3; // px/ms mínimos para aplicar ese impulso
   var UMBRAL_REFRESCO_PX = 1.5;  // arrastre hacia abajo (con la boca cerrada y en lo alto) que se deja al navegador para refrescar
+  var HOLGURA_TOQUE_PX = 14;     // el dedo es menos preciso que el ratón: se amplía así el área de toque
+  var PAUSA_CURSOR_MS = 80;      // mínimo entre comprobaciones de «el ratón está sobre el modelo» (cambia el cursor)
+  var ELIPSE_RESPALDO = { ancho: 0.42, alto: 0.45 }; // área de clic mientras el 3D no ha cargado (fracción de la figura)
   var CONSULTA_APAISADO_BAJO = "(orientation: landscape) and (max-height: 500px)"; // móvil en horizontal: hero normal, sin bloqueo
   var RUTA_MODELO_COMPLETO = "assets/models/craneo.glb";
   var RUTA_MODELO_LIGERO = "assets/models/craneo-ligero.glb";
+
+  // Función del módulo 3D que dice si un punto de la ventana está cerca del cráneo; null mientras no hay 3D
+  var detectorModelo = null;
 
   /* ---------- 1. Datos del negocio (sección 8 del spec — valores de prueba) ---------- */
   var NEGOCIO = {
@@ -380,7 +386,29 @@
         cuadro = window.requestAnimationFrame(avanzar);
       }
     }
-    function alClicFigura() { alternar(); }
+    // ¿Está el punto cerca del cráneo? Con 3D, lo decide el módulo (vértices proyectados); antes de que
+    // cargue, una elipse centrada en la figura aproxima la silueta del póster.
+    function sobreElModelo(x, y, esToque) {
+      if (detectorModelo) return detectorModelo(x, y, esToque ? HOLGURA_TOQUE_PX : 0);
+      var r = figura.getBoundingClientRect();
+      var nx = (x - (r.left + r.width / 2)) / (r.width * ELIPSE_RESPALDO.ancho);
+      var ny = (y - (r.top + r.height / 2)) / (r.height * ELIPSE_RESPALDO.alto);
+      return nx * nx + ny * ny <= 1;
+    }
+    function alClicFigura(e) {
+      // Activación sin puntero (lector de pantalla, teclado) → siempre; con puntero, solo cerca del modelo
+      if (e.detail !== 0 && e.pointerType !== "" && !sobreElModelo(e.clientX, e.clientY, e.pointerType === "touch")) return;
+      alternar();
+    }
+    var tCursor = 0;
+    function alMoverSobreFigura(e) {
+      if (e.pointerType && e.pointerType !== "mouse") return;
+      var ahora = performance.now();
+      if (ahora - tCursor < PAUSA_CURSOR_MS) return;
+      tCursor = ahora;
+      figura.classList.toggle("is-sobre-modelo", sobreElModelo(e.clientX, e.clientY));
+    }
+    function alSalirDeFigura() { figura.classList.remove("is-sobre-modelo"); }
     function alTeclearFigura(e) {
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault();
@@ -395,6 +423,8 @@
       figura.setAttribute("aria-label", "Abrir o cerrar la mandíbula");
       figura.setAttribute("aria-pressed", hero.hasAttribute("data-revelado") ? "true" : "false");
       figura.addEventListener("click", alClicFigura);
+      figura.addEventListener("pointermove", alMoverSobreFigura, { passive: true });
+      figura.addEventListener("pointerleave", alSalirDeFigura, { passive: true });
       figura.addEventListener("keydown", alTeclearFigura);
       document.addEventListener("dentadura:estado", alEstadoClic);
     }
@@ -403,6 +433,9 @@
       clicActivo = false;
       ["role", "tabindex", "aria-label", "aria-pressed"].forEach(function (a) { figura.removeAttribute(a); });
       figura.removeEventListener("click", alClicFigura);
+      figura.removeEventListener("pointermove", alMoverSobreFigura);
+      figura.removeEventListener("pointerleave", alSalirDeFigura);
+      figura.classList.remove("is-sobre-modelo");
       figura.removeEventListener("keydown", alTeclearFigura);
       document.removeEventListener("dentadura:estado", alEstadoClic);
     }
@@ -455,6 +488,7 @@
       var alCambiar = function (e) {
         if (!e.matches) return;
         if (instancia) instancia.destruir();
+        detectorModelo = null;
         raiz.dataset.hero = "estatico";
         liberarBloqueo();
       };
@@ -474,6 +508,7 @@
         })
         .then(function (resultado) {
           instancia = resultado;
+          detectorModelo = resultado && resultado.sobreModelo ? resultado.sobreModelo : null;
         })
         .catch(function () {
           raiz.dataset.hero = "estatico";

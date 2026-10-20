@@ -347,7 +347,9 @@ html[data-hero="animado"] .hero__figura { height: auto; }
 }
 .hero__figura.is-3d .hero__poster { opacity: 0; }
 /* Clic sobre el cráneo: abre/cierra la mandíbula (js/principal.js añade role="button") */
-.hero__figura[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hero__figura[role="button"] { -webkit-tap-highlight-color: transparent; }
+/* El clic solo cuenta cerca del cráneo: el cursor de mano aparece únicamente ahí (js/principal.js) */
+.hero__figura.is-sobre-modelo { cursor: pointer; }
 .hero__figura[role="button"]:focus-visible {
   outline: 3px solid var(--color-acento-oscuro);
   outline-offset: -3px;

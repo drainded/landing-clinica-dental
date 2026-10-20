@@ -146,7 +146,7 @@ En un móvil de gama baja, con ahorro de datos, sin WebGL o con la preferencia �
 - **FR-015** (Hero): Se MUST retirar el slider de fotos y la capa oscura; el hero MUST tener fondo de velos de luz, texto oscuro y conservar logo, `<h1>`, «Agende su cita», teléfono y horario resumido.
 - **FR-016** (Rendimiento): La animación MUST pausarse con el hero fuera de pantalla o la pestaña oculta y MUST liberar sus recursos al destruirse.
 - **FR-017** (Sin terceros): La página MUST NOT hacer peticiones a dominios externos para esta función (ni librerías, ni modelos, ni fuentes).
-- **FR-018** (Clic sobre el cráneo): Al hacer clic o tocar el cráneo, la mandíbula MUST abrirse si está cerrada y cerrarse si está abierta, con la misma animación que el scroll y también con el bloqueo de introducción ya liberado. La figura MUST poder activarse con teclado (Intro/Espacio) y exponer su estado (`aria-pressed`). Con 3D no disponible o movimiento reducido MUST NOT haber interacción (el hero es estático).
+- **FR-018** (Clic sobre el cráneo): Al hacer clic o tocar **cerca del cráneo** (a pocos píxeles de su silueta; no en el resto del hero ni en las zonas vacías de la figura), la mandíbula MUST abrirse si está cerrada y cerrarse si está abierta, con la misma animación que el scroll y también con el bloqueo de introducción ya liberado. La figura MUST poder activarse con teclado (Intro/Espacio) y exponer su estado (`aria-pressed`). Con 3D no disponible o movimiento reducido MUST NOT haber interacción (el hero es estático).
 
 ### Presupuesto (constitución v2.3.0)
 

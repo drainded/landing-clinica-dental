@@ -39,6 +39,9 @@ const INCLINA_X = 0.12;
 const BALANCEO = 0.1;                          // balanceo en reposo (rad)
 const SEGUNDOS_MEDICION_FPS = 3;
 const DPR_MAX = { completo: 2, ligero: 1.5 };
+// Clic sobre el cráneo: solo cuenta si cae a menos de este radio de algún vértice del modelo ya proyectado
+// en pantalla (fracción del ancho de la figura, acotada en píxeles).
+const RADIO_CLIC = { fraccion: 0.045, minPx: 18, maxPx: 32 };
 
 /* ---------- Shaders ---------- */
 
@@ -205,12 +208,13 @@ function medirCaja(raiz) {
 
 /**
  * @param {{ hero: HTMLElement, figura: HTMLElement, nivel: "ligero"|"completo", rutaModelo: string, umbralFps?: number }} opciones
- * @returns {Promise<{ destruir(): void, estado(): string }>}
+ * @returns {Promise<{ destruir(): void, estado(): string, sobreModelo(x: number, y: number, holgura?: number): boolean }>}
  */
 export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 }) {
   let estado = "cargando";
   let destruido = false;
   const limpiezas = [];
+  let sobreModelo = () => false;
 
   function cambiarEstado(nuevo) {
     if (destruido || !ESTADOS.includes(nuevo) || nuevo === estado) return;
@@ -391,6 +395,33 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
     limpiezas.push(() => observador.disconnect());
     medir();
 
+    /* ---- ¿Está el punto (coordenadas de ventana) cerca del modelo? ----
+       Proyecta los vértices con la pose y la cámara actuales (mandíbula, inclinación y encuadre incluidos)
+       y busca alguno a menos de RADIO_CLIC. Solo se llama al hacer clic o al mover el ratón sobre la figura. */
+    const vertice = new Vector3();
+    sobreModelo = (clientX, clientY, holgura = 0) => {
+      if (destruido) return false;
+      const r = canvas.getBoundingClientRect();
+      if (!r.width || !r.height) return false;
+      const f = figura.getBoundingClientRect();
+      const radio = Math.min(RADIO_CLIC.maxPx, Math.max(RADIO_CLIC.minPx, f.width * RADIO_CLIC.fraccion)) + holgura;
+      const radio2 = radio * radio;
+      pivote.updateMatrixWorld(true);
+      camara.updateMatrixWorld(true);
+      let encontrado = false;
+      modelo.traverse((o) => {
+        if (encontrado || !o.isMesh) return;
+        const pos = o.geometry.getAttribute("position");
+        for (let i = 0; i < pos.count; i++) {
+          vertice.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).project(camara);
+          const dx = r.left + (vertice.x * 0.5 + 0.5) * r.width - clientX;
+          const dy = r.top + (0.5 - vertice.y * 0.5) * r.height - clientY;
+          if (dx * dx + dy * dy <= radio2) { encontrado = true; return; }
+        }
+      });
+      return encontrado;
+    };
+
     /* ---- Entradas: scroll (apertura) y puntero (velos + inclinación) ---- */
     let apertura = acota(parseFloat(getComputedStyle(hero).getPropertyValue("--apertura")) || 0);
     let aperturaSuave = apertura;
@@ -525,5 +556,5 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
     degradar();
   }
 
-  return { destruir, estado: () => estado };
+  return { destruir, estado: () => estado, sobreModelo: (x, y, holgura) => sobreModelo(x, y, holgura) };
 }
