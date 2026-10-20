@@ -78,7 +78,7 @@ Sitio estático plano: `index.html`, `css/estilos.css`, `js/`, `assets/` (ver "P
 
 ## Phase 4: User Story 2 — Velos de luz que siguen al cursor (Priority: P1)
 
-**Goal**: velos que se desplazan con paralaje y se curvan junto al cursor/toque, cráneo que se inclina hacia él, balanceo en reposo; recuperación al retirar.
+**Goal**: velos que se desplazan con paralaje y se curvan junto al cursor/toque, cráneo que se inclina hacia él y, en reposo, queda quieto en su posición inicial; recuperación al retirar.
 
 **Independent Test**: E2 de [quickstart.md](quickstart.md) (cursor, salida de ventana, toque con scroll vertical operativo).
 
@@ -87,7 +87,7 @@ Sitio estático plano: `index.html`, `css/estilos.css`, `js/`, `assets/` (ver "P
 - [X] T019 [US2] En el shader de velos de `js/dentadura.js`: uniforms `uCursor` (espacio de pantalla con aspecto), `uInfluencia` y `uTiempo`; por capa, paralaje del cursor (0,06–0,50) y «lente» gaussiana local; flujo del tiempo propio. (Sustituye a la deformación del modelo de la versión anterior, retirada por D-17.)
 - [X] T020 [US2] Entrada del puntero: listeners pasivos `pointermove`/`pointerdown` en `window` que normalizan respecto al escenario; `activo = true` con cualquier movimiento (ratón) o toque apoyado; `pointerup`/`pointercancel` de tipo no-mouse, `pointerleave` del documento y `blur` ponen `activo = false`; nunca `preventDefault()` (FR-007).
 - [X] T021 [US2] Suavizado y límites en el bucle: lerp con `k = 1 − exp(−dt·9)` para el cursor y la influencia; velocidad del cursor acotada (1,5) que decae y acelera el reloj de los velos (0,7 → ≈ 2,9×); sin deformar el modelo.
-- [X] T022 [US2] Inclinación y reposo: `pivote.rotation.y` hacia `ptr.x·0,25·influencia`, `rotation.x` hacia `−ptr.y·0,12·influencia` (lerp); balanceo en reposo `sin(t·0,5)·0,1` rad en Y (FR-006).
+- [X] T022 [US2] Inclinación y reposo: `pivote.rotation.y` hacia `ptr.x·0,25·influencia`, `rotation.x` hacia `−ptr.y·0,12·influencia` (lerp); sin balanceo en reposo (2026-10-20): sin puntero vuelve a 0 (FR-006).
 - [X] T023 [US2] `css/estilos.css`: el canvas no captura eventos (`pointer-events: none`; el puntero se escucha en `window`); `.hero__contacto` (`z-index: 3`), la barra fija y el botón flotante quedan por encima y siguen pulsables (contrato §5, FR-014).
 
 **Checkpoint**: US1 + US2 funcionan; el scroll nativo no se afecta (el único bloqueo es el de introducción, US3).

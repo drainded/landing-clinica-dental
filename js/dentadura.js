@@ -36,7 +36,6 @@ const ABSORCION = 0.66;                        // densidad de la radiografía
 const DESVANECE = new Vector2(0.30, 1.15);     // la bóveda del cráneo se desvanece entre estas alturas (y del mundo)
 const INCLINA_Y = 0.25;                        // inclinación máxima hacia el cursor (rad)
 const INCLINA_X = 0.12;
-const BALANCEO = 0.1;                          // balanceo en reposo (rad)
 const SEGUNDOS_MEDICION_FPS = 3;
 const DPR_MAX = { completo: 2, ligero: 1.5 };
 // Clic sobre el cráneo: solo cuenta si cae a menos de este radio de algún vértice del modelo ya proyectado
@@ -459,7 +458,6 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
     /* ---- Bucle ---- */
     let ultimo = performance.now();
     let reloj = 0;           // segundos propios del fondo; avanzan más rápido si el cursor se mueve
-    let balanceo = 0;
     let primerCuadro = true;
     let medicion = { inicio: 0, cuadros: 0 };
     let intentosFps = 0;
@@ -481,12 +479,11 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
       ptr.velocidad *= Math.exp(-dt * 4);
 
       reloj += dt * (0.7 + 2.2 * ptr.velocidad * ptr.influencia);
-      balanceo += dt;
       uniformsVelos.uTiempo.value = reloj;
       uniformsVelos.uInfluencia.value = ptr.influencia;
       uniformsVelos.uCursor.value.set(ptr.sx * 0.5 * uniformsVelos.uAspect.value, ptr.sy * 0.5);
 
-      pivote.rotation.y = MathUtils.lerp(pivote.rotation.y, Math.sin(balanceo * 0.5) * BALANCEO + ptr.sx * INCLINA_Y * ptr.influencia, k);
+      pivote.rotation.y = MathUtils.lerp(pivote.rotation.y, ptr.sx * INCLINA_Y * ptr.influencia, k);
       pivote.rotation.x = MathUtils.lerp(pivote.rotation.x, -ptr.sy * INCLINA_X * ptr.influencia, k);
 
       // Con la boca abierta la cámara apunta hacia la boca

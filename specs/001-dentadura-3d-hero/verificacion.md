@@ -88,6 +88,10 @@ Lighthouse 12.8.2 (Chrome del PC, headless, perfil móvil por defecto: Moto G Po
 Navegador integrado, 1280×760: el mapa de aciertos (rejilla 40×16 sobre el escenario, ratón) dibuja la silueta del cráneo con ≈ 44 % de la rejilla dentro y el resto vacío. Clic a 40 px de la esquina y en la esquina opuesta: apertura sin cambios (0). Clic sobre los dientes: abre; segundo clic: cierra. Un clic sin puntero (`detail = 0`, como un lector de pantalla) alterna siempre. Cursor de mano solo sobre el cráneo. Coste de cada comprobación ≈ 2 ms. Consola sin errores.
 Móvil real (OnePlus Nord CE 3 Lite, 2026-10-20): el área de toque funciona bien (se amplía 14 px para el dedo).
 
+## Cráneo quieto en reposo — 2026-10-20
+
+Quitado el balanceo en reposo (`BALANCEO` en `js/dentadura.js`). Navegador integrado, 800×715: dos capturas con 8 s de diferencia y sin cursor muestran el cráneo idéntico (mandíbula, dientes y bordes en los mismos píxeles) mientras los velos de fondo sí cambian. Con el cursor a la derecha el cráneo se inclina hacia él; sin cursor o al salir, `ptr.influencia` baja a 0 y vuelve a la pose inicial. Los velos no se tocaron. Consola sin errores.
+
 ## Sin verificar (requiere dispositivo real o herramientas que no se han instalado)
 
 - T038 Lighthouse, T039 (resto de anchos, zoom 200 %, Tab), T042 y T050 (móvil real, táctil, lector de pantalla), recuento de triángulos, 3D a 360 px con apertura, encuadre póster↔3D a 360 px (en la captura del póster y del 3D a 360 px la figura se ve con distinto tamaño: revisar en móvil real).

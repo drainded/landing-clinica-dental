@@ -37,7 +37,7 @@ Jerarquía interna del GLB: `craneo-inferior › maxilar (hueso_sup, dientes_sup
 - Efectos máximos: inclinación ±0,25 rad en Y y ±0,12 rad en X; paralaje de los velos de 0,06 a 0,50 del desplazamiento del cursor; lente de σ² = 1/5 en espacio de pantalla. El modelo no se deforma.
 
 ### Cráneo (escena)
-- `pivote` (grupo, en el centro de la caja del modelo): recibe inclinación hacia el cursor (±0,25 rad en Y, ±0,12 rad en X) + balanceo en reposo (±0,1 rad, ≈ 0,08 Hz).
+- `pivote` (grupo, en el centro de la caja del modelo): recibe inclinación hacia el cursor (±0,25 rad en Y, ±0,12 rad en X); sin balanceo en reposo: sin cursor/toque vuelve a la pose inicial (0, 0).
 - `maxilar`: fijo respecto al pivote.
 - `mandibula`: rotación X = `angulo`.
 - Cada malla del GLB usa **un** material: `hueso` → rayos X (`DoubleSide`, mezcla multiplicativa, sin profundidad, `renderOrder 1`); `dientes` → shader propio blanco brillante (`renderOrder 2`, con profundidad).

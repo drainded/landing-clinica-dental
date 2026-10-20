@@ -17,7 +17,7 @@ Guía de validación de extremo a extremo. No contiene código de implementació
 
 ### E2 — Velos y cursor (US2, SC-003)
 1. Escritorio: mover el cursor por el hero, rápido y despacio, y sacarlo de la ventana.
-2. **Esperado**: los velos se desplazan con paralaje y se curvan junto al cursor, fluyen más rápido si el cursor se mueve rápido; el cráneo se inclina hacia él; al salir de la ventana todo vuelve al reposo en < 1 s; el texto sigue legible.
+2. **Esperado**: los velos se desplazan con paralaje y se curvan junto al cursor, fluyen más rápido si el cursor se mueve rápido; el cráneo se inclina hacia él y, sin cursor, está quieto en su posición inicial; al salir de la ventana todo vuelve al reposo en < 1 s; el texto sigue legible.
 3. Móvil emulado táctil: tocar y arrastrar sobre el hero; el scroll vertical sigue funcionando.
 
 ### E3 — Bloqueo de introducción y apertura (US3, SC-002)
