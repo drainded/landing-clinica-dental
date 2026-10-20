@@ -457,6 +457,17 @@ html[data-hero="animado"] .hero__servicios:focus-visible {
   html[data-hero="animado"] .hero__escenario { height: calc(100svh - var(--alto-header)); }
 }
 
+/* Móvil en horizontal: la pantalla es muy baja (≈ 300 px útiles). El hero deja de ajustarse a la
+   pantalla, mide lo que necesita su contenido y la figura se acota; se desplaza como una página normal. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero__escenario,
+  html[data-hero="animado"] .hero__escenario {
+    height: auto;
+    min-height: 26rem;
+  }
+  .hero__figura { max-width: 17rem; }
+}
+
 /* ---------- 6. Servicios ---------- */
 .servicios__rejilla {
   display: grid;

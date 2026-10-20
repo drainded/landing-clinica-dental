@@ -33,6 +33,10 @@
   var DISTANCIA_RUEDA = 0.9;     // alturas de ventana de rueda que equivalen a todo el progreso
   var DISTANCIA_TOQUE = 0.6;     // alturas de ventana de arrastre táctil que equivalen a todo el progreso
   var PASO_TECLA = 0.35;         // progreso que avanza una pulsación de Espacio / RePág
+  var IMPULSO_TOQUE_MS = 400;   // al soltar un deslizamiento rápido, el dedo «sigue» este tiempo a su última velocidad
+  var VELOCIDAD_MIN_TOQUE = 0.3; // px/ms mínimos para aplicar ese impulso
+  var UMBRAL_REFRESCO_PX = 1.5;  // arrastre hacia abajo (con la boca cerrada y en lo alto) que se deja al navegador para refrescar
+  var CONSULTA_APAISADO_BAJO = "(orientation: landscape) and (max-height: 500px)"; // móvil en horizontal: hero normal, sin bloqueo
   var RUTA_MODELO_COMPLETO = "assets/models/craneo.glb";
   var RUTA_MODELO_LIGERO = "assets/models/craneo-ligero.glb";
 
@@ -164,6 +168,8 @@
     var cuadro = 0;
     var bloqueado = false;
     var yTactil = null;
+    var tTactil = 0;
+    var velTactil = 0;
     var figura = hero.querySelector(".hero__figura");
     var clicActivo = false;
 
@@ -204,25 +210,55 @@
       }
     }
 
+    // En un móvil en horizontal el hero no cabe en pantalla: se comporta como una página normal
+    function apaisadoBajo() {
+      if (!window.matchMedia || !window.matchMedia(CONSULTA_APAISADO_BAJO).matches) return false;
+      liberar();
+      return true;
+    }
+
     function alRueda(e) {
       if (e.ctrlKey) return;   // zoom del navegador
+      if (apaisadoBajo()) return;
       e.preventDefault();
       var px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
       empujar(px / (window.innerHeight * DISTANCIA_RUEDA));
     }
     function alTocar(e) {
       yTactil = e.touches.length === 1 ? e.touches[0].clientY : null;
+      tTactil = e.timeStamp;
+      velTactil = 0;
     }
     function alMoverToque(e) {
       if (yTactil === null || e.touches.length !== 1) return;
+      if (apaisadoBajo()) return;
       var y = e.touches[0].clientY;
       var dy = yTactil - y;
+      var dt = e.timeStamp - tTactil;
       yTactil = y;
+      tTactil = e.timeStamp;
+      // Arrastre hacia abajo con la boca cerrada y en lo alto: es el gesto de «tirar para refrescar»
+      // del navegador; no se intercepta (si no, la página no se puede actualizar)
+      if (dy < -UMBRAL_REFRESCO_PX && objetivo <= 0 && window.pageYOffset <= 0) {
+        velTactil = 0;
+        return;
+      }
+      if (dt > 0) velTactil = 0.6 * (dy / dt) + 0.4 * velTactil;
       if (e.cancelable) e.preventDefault();
       empujar(dy / (window.innerHeight * DISTANCIA_TOQUE));
     }
+    // Un deslizamiento rápido mueve poco el dedo: al soltarlo se añade el impulso que habría tenido el scroll
+    function alSoltarToque(e) {
+      var reciente = e.timeStamp - tTactil < 80;
+      if (yTactil !== null && reciente && Math.abs(velTactil) > VELOCIDAD_MIN_TOQUE) {
+        empujar(velTactil * IMPULSO_TOQUE_MS / (window.innerHeight * DISTANCIA_TOQUE));
+      }
+      yTactil = null;
+      velTactil = 0;
+    }
     function alTeclear(e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (apaisadoBajo()) return;
       if (e.key === "Tab") { liberar(); return; }   // navegar con teclado nunca se bloquea
       var t = e.target;
       if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
@@ -283,6 +319,8 @@
       window.addEventListener("wheel", alRueda, { passive: false });
       window.addEventListener("touchstart", alTocar, { passive: true });
       window.addEventListener("touchmove", alMoverToque, { passive: false });
+      window.addEventListener("touchend", alSoltarToque, { passive: true });
+      window.addEventListener("touchcancel", alSoltarToque, { passive: true });
       window.addEventListener("keydown", alTeclear);
       window.addEventListener("scroll", alDesplazar, { passive: true });
       document.addEventListener("click", alHacerClic, true);
@@ -303,6 +341,8 @@
         window.removeEventListener("wheel", alRueda);
         window.removeEventListener("touchstart", alTocar);
         window.removeEventListener("touchmove", alMoverToque);
+        window.removeEventListener("touchend", alSoltarToque);
+        window.removeEventListener("touchcancel", alSoltarToque);
         window.removeEventListener("keydown", alTeclear);
         window.removeEventListener("scroll", alDesplazar);
         document.removeEventListener("click", alHacerClic, true);
@@ -376,8 +416,8 @@
 
     activarClic();
 
-    if (window.pageYOffset > 2) {
-      // Página cargada ya desplazada (recarga, ancla): sin bloqueo y con la boca abierta
+    if (window.pageYOffset > 2 || (window.matchMedia && window.matchMedia(CONSULTA_APAISADO_BAJO).matches)) {
+      // Página cargada ya desplazada (recarga, ancla) o móvil en horizontal: sin bloqueo y con la boca abierta
       objetivo = progreso = 1;
       publicar();
       vigilar();

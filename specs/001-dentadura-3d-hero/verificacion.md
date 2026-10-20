@@ -34,6 +34,30 @@ Navegador integrado, 1280×760 y 360×640 (táctil emulado):
 - 360×640: toque abre y segundo toque cierra; sin scroll horizontal; consola sin errores.
 - Sin comprobar: toque físico en Android/iOS, lector de pantalla.
 
+## Prueba en móvil real — 2026-10-19 (T042 parcial, T050 parcial)
+
+**Dispositivo**: OnePlus Nord CE 3 Lite 5G, OxygenOS 15, 8 GB de RAM; Chrome y Startpage, vía Wi-Fi (servidor local).
+
+| Prueba | Resultado |
+|---|---|
+| E1 carga y paso póster → 3D | ✅ cráneo inmediato, sin salto de tamaño/posición, texto sin moverse |
+| E3 apertura con el dedo | ✅ lento e inercia; ⚠️ un deslizamiento **rápido** necesitaba varios gestos (corregido, ver abajo) |
+| FR-018 toque abre/cierra, arrastre tras cerrar, botones no mueven la mandíbula | ✅ |
+| E4 contacto, WhatsApp con mensaje, «Conoce nuestros servicios» sin tapar | ✅ |
+| E7 fluidez | ✅ fluido (solo probado en este equipo; falta uno modesto) |
+| E8 rotación | ❌ en horizontal el hero quedaba diminuto y sin botones (corregido, ver abajo); el zoom de letra pide más gestos para abrir pero se lee bien |
+| T050 TalkBack | ✅ anuncia «Abrir o cerrar la mandíbula» como botón con estado; sin aviso del canvas |
+| Salidas del bloqueo | ✅ no atrapa |
+| E5 movimiento reducido | ✅ solo póster, eslogan y botón visibles; ⚠️ el diseño estático necesita rediseño (pendiente) |
+| Ahorro de datos | ⚠️ siguió mostrando el 3D (el equipo es potente; el navegador probablemente no expone `saveData`) |
+| Actualizar la página | ❌ el gesto de tirar hacia abajo movía el modelo en vez de refrescar (corregido, ver abajo) |
+
+### Correcciones (2026-10-19, T052)
+
+- **Horizontal** (`orientation: landscape` y alto ≤ 500 px): el hero mide lo que necesita (≥ 26 rem), la figura se acota a 17 rem, no hay bloqueo de introducción y la mandíbula arranca abierta. Emulado a 800×330: eslogan, «Conoce nuestros servicios», «Agende su cita», teléfono y barra fija alcanzables; sin scroll horizontal.
+- **Refrescar**: un arrastre hacia abajo (> 1,5 px) con la boca cerrada y la página en lo alto ya no se intercepta, así que el navegador puede refrescar. Probado con eventos táctiles sintéticos: `defaultPrevented = false` y apertura sin cambios. **Falta confirmarlo con el dedo en el móvil.**
+- **Deslizamiento rápido**: al soltar se añade un impulso (velocidad × 400 ms, mínimo 0,3 px/ms). Sintético: 20 px en 16 ms → apertura 0,81 (antes ≈ 0,05); un arrastre lento y corto sigue sin impulso (0,026).
+
 ## Sin verificar (requiere dispositivo real o herramientas que no se han instalado)
 
 - T038 Lighthouse, T039 (resto de anchos, zoom 200 %, Tab), T042 y T050 (móvil real, táctil, lector de pantalla), recuento de triángulos, 3D a 360 px con apertura, encuadre póster↔3D a 360 px (en la captura del póster y del 3D a 360 px la figura se ve con distinto tamaño: revisar en móvil real).
