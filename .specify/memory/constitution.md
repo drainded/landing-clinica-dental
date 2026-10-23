@@ -1,5 +1,19 @@
 <!--
 Sync Impact Report
+- Version change: 2.4.0 → 2.5.0 (MINOR: el respaldo de imágenes del hero lleva siempre la transición por scroll,
+  también con «reducir movimiento»; no se elimina ningún principio ni se toca el scroll nativo ni el contacto)
+- Modified principles:
+  - VI. Adaptación al dispositivo: el nivel (a) ya no mostrará «la composición final sin ninguna animación» con
+    movimiento reducido: recibe imágenes (sin 3D, sin velos que fluyen ni inclinación con el cursor) y la misma
+    transición del cráneo cerrado al abierto, que solo avanza con el scroll de la propia persona (decisión del
+    cliente tras la prueba en móvil real, 2026-10-23: el cambio de pose debe verse en todos los dispositivos).
+  - Riesgo de accesibilidad registrado: quien tenga una sensibilidad fuerte al movimiento verá un fundido ligado a
+    su propio scroll (sin movimiento autónomo). Solo hay dos modos: 3D e imágenes.
+- Follow-up TODOs:
+  - SPEC.md: D-20 registrada.
+-->
+<!--
+Sync Impact Report
 - Version change: 2.3.0 → 2.4.0 (MINOR: se amplía la guía del respaldo estático del hero; no se
   elimina ni se debilita ningún principio; el scroll nativo y el acceso a contacto no cambian)
 - Modified principles:
@@ -175,10 +189,10 @@ máximo 60 KB cada una, y de un fondo de imagen con versión para PC (máximo 80
 Tres niveles:
 - (a) Con `prefers-reduced-motion`, ahorro de datos, equipo lento o sin WebGL: solo las imágenes
   estáticas del respaldo (cráneo cerrado y abierto sobre el fondo de imagen), sin 3D ni scroll
-  suave. Con movimiento reducido se muestra la composición final sin ninguna animación; con
-  ahorro de datos o equipo lento (sin movimiento reducido) puede haber una transición por el
-  scroll nativo que anima solo `opacity`/`transform`, nunca bloquea el scroll y no es «scroll
-  suave» (Lenis).
+  suave. Todos esos casos (también «reducir movimiento») reciben el mismo hero de imágenes, con una
+  transición por el scroll nativo que anima solo `opacity`/`transform`, avanza únicamente con el
+  scroll de la persona (sin movimiento propio, sin efecto del cursor), nunca bloquea el scroll y no
+  es «scroll suave» (Lenis). Solo hay dos modos: el 3D y el de imágenes.
 - (b) Móvil: modelo ligero y límite de resolución de pantalla del render.
 - (c) Escritorio: versión completa.
 La detección usa características disponibles, con degradación segura cuando una API no exista
@@ -233,4 +247,4 @@ material, PATCH para aclaraciones y redacción. Los planes (`plan.md`) MUST incl
 verificación de cumplimiento con los nueve principios, y toda desviación MUST justificarse por
 escrito.
 
-**Version**: 2.4.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-22
+**Version**: 2.5.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-23

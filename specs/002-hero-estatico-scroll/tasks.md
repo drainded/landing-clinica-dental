@@ -135,6 +135,18 @@ Sitio estático plano: `index.html`, `css/estilos.css`, `js/`, `assets/img/`. He
 
 ---
 
+## Phase 9: Ajuste tras la prueba en móvil real (2026-10-23) — solo dos modos
+
+**Contexto**: en el móvil real el hero se veía fijo (cráneo abierto, sin transición) porque el teléfono tiene «quitar animaciones» activo (`prefers-reduced-motion`). El cliente necesita que el cambio de cráneo cerrado → abierto se vea siempre: **solo hay dos modos, el 3D y el de imágenes, y el de imágenes lleva siempre la transición por scroll** (decisión D-20, constitución v2.5.0). La composición final sin anclaje queda solo para el móvil apaisado bajo y para quien no tiene JS.
+
+- [X] T034 Documentar la decisión: `spec.md` (US4, FR-005, FR-012, SC-004, casos límite y supuestos), `plan.md`, `data-model.md`, `research.md` (R1, R6), `contracts/hero-estatico.md`, `quickstart.md` E4/E5, constitución **v2.5.0** (principio VI(a) e informe de impacto) y `SPEC.md` (D-20 y descripción del hero), registrando el riesgo de accesibilidad (fundido ligado al scroll de la persona; sin 3D, sin velos que fluyen ni inclinación con el cursor).
+- [X] T035 En `index.html`: el script del `<head>` añade `data-transicion` a todo el modo `estatico` (también con `prefers-reduced-motion`); los `<source>` del cráneo abierto pasan a `media="not all"` con su `data-media` (un solo mecanismo para todos los modos) y se quitan los `preload` condicionados por movimiento reducido (queda el del póster cerrado). En `css/estilos.css` se retira el bloque que forzaba la composición final con movimiento reducido (solo quedan sus `transition: none`).
+- [X] T036 En `js/principal.js` sustituir `iniciarEstatico` por `activarModoImagenes(motivo)`: añade `data-transicion`, arranca `controlarTransicionScroll` y habilita la imagen abierta; se llama al cargar con `estatico`, cuando el 3D falla (evento `dentadura:estado`, error al importar el módulo) y cuando se activa «reducir movimiento» con el 3D mostrado (el escenario no se mueve: el espaciador del recorrido queda bajo el hero); el único paso a composición final es el móvil apaisado bajo.
+- [X] T037 Reescribir el subcomando `modos` de `referencias/herramientas/hero.mjs` para el comportamiento nuevo y repetir E4/E5 en 390 × 844 y 1440 × 900, la transición por scroll con el perfil `movimiento-reducido` y el caso apaisado; registrar en `verificacion.md`.
+- [ ] T038 Repetir la prueba en el móvil real (el mismo teléfono con «quitar animaciones» activo, y otro sin él): comprobar que se ve el cráneo cerrado al cargar, que el scroll lo abre con el eslogan y el botón, que el contacto sigue accesible, y la inercia y la barra de direcciones. Incluye Safari de iOS y Firefox para el cambio dinámico de `media` en los `<source>` (T032).
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

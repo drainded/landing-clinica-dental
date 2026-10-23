@@ -533,7 +533,7 @@ async function red(base, o) {
   }
 }
 
-/* ---------- modos: escenarios de movimiento reducido, ahorro de datos y fallos (E4 y E5) ---------- */
+/* ---------- modos: movimiento reducido, ahorro de datos y fallos del 3D (E4 y E5): siempre el modo imágenes con transición ---------- */
 
 const ESTADO_MODOS = `(() => {
   const q = (s) => document.querySelector(s);
@@ -553,56 +553,62 @@ const ESTADO_MODOS = `(() => {
 async function modos(base, o) {
   let fallos = 0;
   const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
-  const finalOk = (e) => Number(e.apertura) === 1 && !e.transicion && e.escenario !== "sticky" && e.eslogan === 1 && e.boton === 1 && e.clic === "auto";
+  // Modo imágenes con la boca cerrada (scroll arriba): póster visible, cráneo abierto y eslogan ocultos, hero anclable
+  const imagenesCerrado = (e) => e.hero === "estatico" && e.transicion && Number(e.apertura) === 0 && e.poster === 1 && e.abierto === 0 && e.eslogan === 0 && e.boton === 0;
+  // ... y con la transición completa
+  const imagenesAbierto = (e) => e.hero === "estatico" && e.transicion && Number(e.apertura) === 1 && e.abierto === 1 && e.poster === 0 && e.eslogan === 1 && e.boton === 1 && e.clic === "auto";
   const clipEscenario = (p) => p.evaluar(`(() => { const b = document.querySelector('.hero__escenario').getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, width: b.width, height: b.height }; })()`);
+  const alFinal = async (p) => {
+    const geo = await p.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario'); return h.offsetHeight - e.offsetHeight + h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0); })()`);
+    await p.evaluar(`window.scrollTo({ top: ${Math.round(geo)}, behavior: 'instant' })`);
+    await esperar(1800);
+  };
   const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
 
   for (const [ancho, alto] of tamanos) {
     const grande = ancho >= 1024;
     console.log(`\n${ancho}×${alto}`);
 
-    // A) Movimiento reducido: composición final desde el principio y ningún píxel cambia con cursor ni scroll
+    // A) «Reducir movimiento»: mismo modo de imágenes, con la transición por scroll (decisión del cliente, D-20)
     let p = await abrirPagina({ ancho, alto, perfil: "movimiento-reducido", chrome: o.chrome });
     try {
       await p.ir(base + "index.html");
       await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
       await esperar(1200);
       const e = await p.evaluar(ESTADO_MODOS);
-      ok(finalOk(e) && e.abierto === 1 && e.poster === 0 && e.listo, `movimiento reducido: composición final (apertura ${e.apertura}, abierto ${e.abierto}, póster ${e.poster}, eslogan ${e.eslogan}, botón ${e.boton}, ${e.escenario})`);
+      ok(imagenesCerrado(e) && e.escenario === "sticky", `movimiento reducido: modo imágenes con el cráneo cerrado y el hero anclado (apertura ${e.apertura}, póster ${e.poster}, eslogan ${e.eslogan}, ${e.escenario})`);
       const urls = p.peticiones;
       const esperada = grande ? "craneo-abierto-escritorio" : "craneo-abierto-movil";
       ok(urls.some((u) => u.includes(esperada)) && !urls.some((u) => u.includes("craneo-abierto-" + (grande ? "movil" : "escritorio"))), `se pide solo la variante del cráneo abierto de este tamaño (${esperada})`);
       ok(!urls.some((u) => u.includes("three-dentadura") || u.endsWith(".glb")), "no se pide three.js ni el modelo 3D");
-      console.log(`  INFO  LCP: ${e.lcp ? `${e.lcp.url ? e.lcp.url.replace(base, "") : e.lcp.tag} a los ${e.lcp.t} ms` : "sin dato"}`);
+      // El cursor no mueve nada en este modo: ningún píxel cambia (zonas sin enlaces ni botones)
       const antes = await p.pantalla(await clipEscenario(p));
-      // Recorrido del cursor por zonas sin enlaces ni botones (el :hover de un enlace no es movimiento del hero)
       for (const [x, y] of [[ancho * 0.05, alto * 0.25], [ancho * 0.95, alto * 0.45], [ancho * 0.05, alto * 0.65], [ancho * 0.93, alto * 0.30]]) {
         await p.cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: Math.round(x), y: Math.round(y) });
         await esperar(150);
       }
       await esperar(600);
-      const tras = await p.pantalla(await clipEscenario(p));
-      ok(antes.equals(tras), "mover el cursor por el hero no cambia ningún píxel");
-      await p.evaluar("window.scrollTo({ top: 300, behavior: 'instant' })");
-      await esperar(500);
-      await p.evaluar("window.scrollTo({ top: 0, behavior: 'instant' })");
-      await esperar(600);
-      const vuelta = await p.pantalla(await clipEscenario(p));
-      ok(antes.equals(vuelta), "hacer scroll y volver no cambia ningún píxel del hero");
+      ok(antes.equals(await p.pantalla(await clipEscenario(p))), "mover el cursor por el hero no cambia ningún píxel");
+      await alFinal(p);
+      const f = await p.evaluar(ESTADO_MODOS);
+      ok(imagenesAbierto(f), `con el scroll el cráneo pasa de cerrado a abierto y aparecen eslogan y botón (apertura ${f.apertura}, abierto ${f.abierto}, póster ${f.poster}, eslogan ${f.eslogan})`);
     } finally { await p.cerrar(); }
 
-    // B) Reducir movimiento con la página abierta y la transición a medias
-    p = await abrirPagina({ ancho, alto, perfil: "ahorro-datos", chrome: o.chrome });
+    // B) Activar «reducir movimiento» con el 3D ya mostrado: pasa al modo imágenes (sin 3D) con la transición
+    p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
     try {
       await p.ir(base + "index.html");
-      await esperar(1200);
-      await p.evaluar("window.scrollTo({ top: 250, behavior: 'instant' })");
-      await esperar(900);
+      await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000);
+      await esperar(800);
       const antes = await p.evaluar(ESTADO_MODOS);
       await p.cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
-      await esperar(1500);
+      await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 20000);
+      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
+      await esperar(1200);
       const e = await p.evaluar(ESTADO_MODOS);
-      ok(antes.transicion && finalOk(e) && e.abierto === 1, `activar «reducir movimiento» con la transición a medias (apertura ${antes.apertura}) → composición final (apertura ${e.apertura}, ${e.escenario})`);
+      ok(antes.is3d && imagenesCerrado(e) && !e.canvas, `«reducir movimiento» con el 3D mostrado: pasa al modo imágenes (apertura ${e.apertura}, póster ${e.poster}, sin canvas)`);
+      await alFinal(p);
+      ok(imagenesAbierto(await p.evaluar(ESTADO_MODOS)), "y la transición por scroll funciona");
     } finally { await p.cerrar(); }
 
     // C) Imagen del cráneo abierto bloqueada: el hero sigue completo con el cráneo cerrado
@@ -611,43 +617,31 @@ async function modos(base, o) {
       await p.cdp.send("Network.setBlockedURLs", { urls: ["*craneo-abierto*"] });
       await p.ir(base + "index.html");
       await esperar(1200);
-      const geo = await p.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario'); return h.offsetHeight - e.offsetHeight + h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0); })()`);
-      await p.evaluar(`window.scrollTo({ top: ${Math.round(geo)}, behavior: 'instant' })`);
-      await esperar(2500);
+      await alFinal(p);
       const e = await p.evaluar(ESTADO_MODOS);
       ok(e.fallo && e.poster === 1 && e.eslogan === 1 && e.boton === 1 && e.clic === "auto" && !e.listo, `imagen abierta bloqueada: póster ${e.poster}, eslogan ${e.eslogan}, botón ${e.boton}, clic ${e.clic}, fallo ${e.fallo}`);
     } finally { await p.cerrar(); }
 
-    // D) Modelo 3D bloqueado en un equipo capaz: pasa a la composición final sin mover nada
-    p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
-    try {
-      await p.cdp.send("Network.setBlockedURLs", { urls: ["*.glb"] });
-      await p.ir(base + "index.html");
-      await esperar(1000);
-      const antes = await p.evaluar(ESTADO_MODOS);
-      await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 30000);
-      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
-      await esperar(1200);
-      const e = await p.evaluar(ESTADO_MODOS);
-      ok(antes.hero === "animado" && finalOk(e) && e.abierto === 1 && e.poster === 0 && !e.canvas, `3D bloqueado: de animado a estático final (apertura ${e.apertura}, abierto ${e.abierto}, póster ${e.poster}, sin canvas)`);
-      ok(antes.cajas === e.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === e.cajas ? "idénticos" : antes.cajas + " → " + e.cajas})`);
-    } finally { await p.cerrar(); }
-
-    // E) Pérdida del contexto WebGL con el 3D ya mostrado
-    p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
-    try {
-      await p.ir(base + "index.html");
-      await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000);
-      await esperar(800);
-      const antes = await p.evaluar(ESTADO_MODOS);
-      await p.evaluar("(() => { const gl = document.querySelector('.hero__canvas').getContext('webgl2') || document.querySelector('.hero__canvas').getContext('webgl'); gl.getExtension('WEBGL_lose_context').loseContext(); })()");
-      await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 20000);
-      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
-      await esperar(1200);
-      const e = await p.evaluar(ESTADO_MODOS);
-      ok(antes.is3d && finalOk(e) && e.abierto === 1 && e.poster === 0 && !e.canvas, `contexto WebGL perdido: del 3D a la composición final (apertura ${e.apertura}, abierto ${e.abierto}, póster ${e.poster}, sin canvas)`);
-      ok(antes.cajas === e.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === e.cajas ? "idénticos" : antes.cajas + " → " + e.cajas})`);
-    } finally { await p.cerrar(); }
+    // D y E) El 3D falla en un equipo capaz (modelo bloqueado; contexto WebGL perdido): modo imágenes sin mover nada
+    for (const caso of ["modelo bloqueado", "contexto WebGL perdido"]) {
+      p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
+      try {
+        if (caso === "modelo bloqueado") await p.cdp.send("Network.setBlockedURLs", { urls: ["*.glb"] });
+        await p.ir(base + "index.html");
+        if (caso === "modelo bloqueado") await esperar(1000);
+        else { await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000); await esperar(800); }
+        const antes = await p.evaluar(ESTADO_MODOS);
+        if (caso !== "modelo bloqueado") await p.evaluar("(() => { const c = document.querySelector('.hero__canvas'); const gl = c.getContext('webgl2') || c.getContext('webgl'); gl.getExtension('WEBGL_lose_context').loseContext(); })()");
+        await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 30000);
+        await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
+        await esperar(1200);
+        const e = await p.evaluar(ESTADO_MODOS);
+        ok(antes.hero === "animado" && imagenesCerrado(e) && !e.canvas, `3D (${caso}): pasa al modo imágenes con el cráneo cerrado (apertura ${e.apertura}, póster ${e.poster}, sin canvas)`);
+        ok(antes.cajas === e.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === e.cajas ? "idénticos" : antes.cajas + " → " + e.cajas})`);
+        await alFinal(p);
+        ok(imagenesAbierto(await p.evaluar(ESTADO_MODOS)), "y la transición por scroll funciona");
+      } finally { await p.cerrar(); }
+    }
   }
   return fallos ? 1 : 0;
 }

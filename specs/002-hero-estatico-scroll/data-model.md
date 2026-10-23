@@ -19,25 +19,25 @@ No hay datos persistentes. El «modelo» es el estado en memoria del hero y el i
 
 ## 2. Modo del hero → fuente del progreso y disposición
 
-Entradas: `data-hero` (`animado` | `estatico`, del `<head>`), `data-transicion` (presente solo con `estatico` y sin movimiento reducido), preferencia de movimiento reducido, móvil apaisado bajo.
+Entradas: `data-hero` (`animado` | `estatico`, del `<head>`), `data-transicion` (presente en todo el modo `estatico`, **también con movimiento reducido**), móvil apaisado bajo. Solo hay dos modos: 3D (`animado`) e imágenes (`estatico` + `data-transicion`).
 
 | Modo | Condición | `fuente` | Anclado | Imagen abierta |
 |---|---|---|---|---|
 | **3D** | `data-hero="animado"` | `bloqueo` | no | solo mientras el 3D carga y `apertura > 0` |
-| **Estático con transición** | `data-hero="estatico"` + `data-transicion` | `scroll` | sí (`sticky`, recorrido `D`) | tras `load` (o primer scroll con ahorro de datos) |
-| **Estático final** | movimiento reducido, sin JS, móvil apaisado bajo, o 3D degradado en caliente | `fija` (1) | no | inmediata |
+| **Imágenes con transición** (`estatico`) | `data-hero="estatico"` + `data-transicion`: ahorro de datos, equipo lento, «reducir movimiento», 3D fallido o descartado | `scroll` | sí (`sticky`, recorrido `D`) | tras `load` (primer scroll con ahorro de datos; ya si el 3D falla) |
+| **Composición final** (excepción) | móvil apaisado bajo (el hero no cabe en pantalla) o sin JS | `fija` (1) | no | inmediata |
 
 ### Transiciones de estado
 
 ```
-carga ──► 3D ──(fallo / contexto perdido / reducir movimiento en vivo)──► Estático final
+carga ──► 3D ──(fallo / contexto perdido / reducir movimiento en vivo)──► Imágenes con transición
   │
-  └──► Estático con transición ◄──(solo se decide en el <head>; nunca se entra a él en caliente)
+  └──► Imágenes con transición ◄──(se decide en el <head> para ahorro de datos, equipo lento y «reducir movimiento»)
 ```
 
-- **3D → Estático final**: `liberar(true)` del bloqueo deja `apertura = 1`; el cráneo abierto ya está (o se pide) y el canvas desaparece.
-- **Reducir movimiento activado en vivo** estando en «Estático con transición»: se quita `data-transicion`, `apertura = 1`, desaparece el anclaje.
-- No existe transición «Estático final → con transición» en caliente.
+- **3D → Imágenes con transición**: el bloqueo de introducción se libera, se añade `data-transicion`, el control por scroll toma el relevo (`apertura` pasa a salir de la posición de scroll: 0 en lo alto) y se pide ya el cráneo abierto; el póster cerrado permanece visible hasta que llegue y el canvas desaparece. El escenario no se mueve (el espaciador del recorrido queda bajo el hero).
+- **Reducir movimiento activado en vivo** con el 3D mostrado: igual que un fallo del 3D. Con el modo de imágenes ya activo no cambia nada.
+- **Imágenes con transición → Composición final**: solo al pasar a móvil apaisado bajo; se quita `data-transicion` y `apertura = 1`.
 
 ## 3. Cálculo de `apertura` en modo `scroll`
 

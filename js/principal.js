@@ -611,15 +611,23 @@
   }
 
   /**
-   * Modo estático (sin 3D): con data-transicion el scroll gobierna la apertura; en el resto, composición final
-   * (cráneo abierto, eslogan y botón en la boca, sin animación). Si con la transición activa la persona pide
-   * «reducir movimiento» o el móvil pasa a horizontal bajo (el hero no cabe en pantalla), se pasa a la composición
-   * final: se detiene el control por scroll, se quita data-transicion y --apertura queda en 1.
+   * Modo imágenes (sin 3D): el scroll nativo gobierna la apertura —cráneo cerrado → abierto con el hero anclado— y
+   * el eslogan y el botón aparecen en la boca. Es el mismo modo para ahorro de datos, equipo lento, «reducir
+   * movimiento» (la transición solo avanza cuando la persona hace scroll; no hay movimiento propio), sin WebGL o con
+   * el 3D fallido. Solo hay dos modos: 3D e imágenes. Única excepción: móvil apaisado bajo (el hero no cabe en
+   * pantalla): composición final sin anclaje; se detiene el control por scroll, se quita data-transicion y
+   * --apertura queda en 1.
+   * motivo: "transicion" (carga normal: la imagen abierta se pide con el navegador libre o en el primer scroll con
+   * ahorro de datos) o "inmediato" (el 3D acaba de fallar o se descartó: se pide ya).
    */
-  function iniciarEstatico() {
+  var modoImagenesActivo = false;
+
+  function activarModoImagenes(motivo) {
     var raiz = document.documentElement;
     var hero = document.getElementById("inicio");
-    if (!hero || !raiz.hasAttribute("data-transicion")) return;
+    if (!hero || modoImagenesActivo) return;
+    modoImagenesActivo = true;
+    raiz.dataset.hero = "estatico";
     var detener = null;
 
     function aComposicionFinal() {
@@ -631,15 +639,13 @@
     }
 
     if (window.matchMedia) {
-      var alCambiar = function (e) { if (e.matches) aComposicionFinal(); };
-      var reducir = window.matchMedia("(prefers-reduced-motion: reduce)");
       var apaisado = window.matchMedia(CONSULTA_APAISADO_BAJO);
-      if (reducir.addEventListener) reducir.addEventListener("change", alCambiar);
-      if (apaisado.addEventListener) apaisado.addEventListener("change", alCambiar);
+      if (apaisado.addEventListener) apaisado.addEventListener("change", function (e) { if (e.matches) aComposicionFinal(); });
       if (apaisado.matches) { aComposicionFinal(); return; }
     }
+    raiz.setAttribute("data-transicion", "");
     detener = controlarTransicionScroll(hero);
-    habilitarImagenAbierta(hero, "transicion");
+    habilitarImagenAbierta(hero, motivo);
   }
 
   function iniciarDentadura() {
@@ -649,25 +655,24 @@
     var captura = /[?&]captura(?:[&=]|$)/.test(window.location.search);
     if (captura) raiz.dataset.hero = "animado";
     if (raiz.dataset.hero !== "animado" || (!captura && esEquipoModesto())) {
-      raiz.dataset.hero = "estatico";
-      iniciarEstatico();
+      activarModoImagenes("transicion");
       return;
     }
 
     var hero = document.getElementById("inicio");
     var figura = hero && hero.querySelector(".hero__figura");
     if (!figura) {
-      raiz.dataset.hero = "estatico";
+      activarModoImagenes("transicion");
       return;
     }
 
     var liberarBloqueo = captura ? function () {} : publicarApertura(hero);
 
-    // Si el 3D falla (sin WebGL, modelo, contexto perdido, FPS bajos) el hero pasa a la composición final: la
-    // apertura queda en 1 (lo hace el bloqueo al liberarse) y se pide ya el cráneo abierto; mientras llega se
-    // ve el póster cerrado. No se reconfigura el hero (sin anclaje ni recorrido) para no mover nada.
+    // Si el 3D falla (sin WebGL, modelo, contexto perdido, FPS bajos) el hero pasa al modo imágenes: el scroll
+    // gobierna la apertura desde la posición actual y se pide ya el cráneo abierto (mientras llega se ve el
+    // póster cerrado). El bloqueo de introducción se libera antes (su propio oyente de este mismo evento).
     document.addEventListener("dentadura:estado", function (e) {
-      if (e.detail && e.detail.estado === "estatico") habilitarImagenAbierta(hero, "inmediato");
+      if (e.detail && e.detail.estado === "estatico") activarModoImagenes("inmediato");
     });
     if (!captura) habilitarImagenAbierta(hero, "3d");
 
@@ -676,16 +681,15 @@
 
     var instancia = null;
 
-    // Si la persona activa «reducir movimiento» con la página abierta, se vuelve al póster
+    // Si la persona activa «reducir movimiento» con la página abierta, se pasa al modo imágenes (sin 3D)
     if (window.matchMedia) {
       var reducir = window.matchMedia("(prefers-reduced-motion: reduce)");
       var alCambiar = function (e) {
         if (!e.matches) return;
         if (instancia) instancia.destruir();
         detectorModelo = null;
-        raiz.dataset.hero = "estatico";
         liberarBloqueo();
-        habilitarImagenAbierta(hero, "inmediato");
+        activarModoImagenes("inmediato");
       };
       if (reducir.addEventListener) reducir.addEventListener("change", alCambiar);
     }
@@ -708,7 +712,8 @@
           if (captura) window.__craneo = resultado;
         })
         .catch(function () {
-          raiz.dataset.hero = "estatico";
+          liberarBloqueo();
+          activarModoImagenes("inmediato");
         });
     }
 

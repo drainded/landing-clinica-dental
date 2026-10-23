@@ -13,9 +13,9 @@ Extiende `specs/001-dentadura-3d-hero/contracts/hero-dentadura.md`. Lo no mencio
      <div class="hero__poster-caja">                  <!-- NUEVO · rectángulo del póster (contain, 524:564) -->
       <picture class="hero__abierto" aria-hidden="true">          <!-- NUEVO · debajo del póster -->
         <source srcset="assets/img/craneo-abierto-escritorio.webp"
-                media="(prefers-reduced-motion: reduce) and (min-width: 1024px)" data-media="(min-width: 1024px)">
+                media="not all" data-media="(min-width: 1024px)">
         <source srcset="assets/img/craneo-abierto-movil.webp"
-                media="(prefers-reduced-motion: reduce)" data-media="all">
+                media="not all" data-media="all">
         <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
              alt="" width="…" height="…" decoding="async" fetchpriority="high"
              onload="if(this.currentSrc.slice(0,5)!=='data:')document.documentElement.setAttribute('data-abierto-listo','')">
@@ -34,7 +34,7 @@ Reglas:
 
 - **Rectángulo del póster**: `.hero__figura` es contenedor (`container-type: size`) y `.hero__poster-caja` mide `width: min(100cqw, calc(100cqh * 524 / 564)); aspect-ratio: 524 / 564`, centrado (`position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%)`). Es el mismo rectángulo `contain` que usa `js/dentadura.js` para calibrar la cámara, de modo que el póster, el cráneo abierto y el 3D comparten referencia. El póster ocupa el 100 % de la caja; el cráneo abierto se coloca con `left/top/width/height` en % de la caja. Con `container-type: size` la figura no aporta tamaño intrínseco: en móvil apaisado bajo (`height: auto`) se le da `aspect-ratio: 524 / 564`.
 - La imagen abierta y el póster son decorativos; no hay texto horneado en ninguna imagen; el orden de tabulación no cambia (la figura lleva `role="button"` solo en modo 3D).
-- **Carga del cráneo abierto**: en movimiento reducido (o sin JS) los `<source>` apuntan a la imagen real y el navegador la pide enseguida y con prioridad alta (es el LCP de ese modo). En el resto de modos solo se ve el GIF de 1×1 (sin petición) hasta que `habilitarImagenAbierta` cambia el `media` de los `<source>` (ver §5). No hay `loading="lazy"` ni `display: none`.
+- **Carga del cráneo abierto**: solo se ve el GIF de 1×1 (sin petición) hasta que `habilitarImagenAbierta` cambia el `media` de los `<source>` (ver §5). No hay `loading="lazy"` ni `display: none`. Todos los modos usan este mismo mecanismo (no hay un camino distinto para «reducir movimiento»).
 - El `onload` del `<img>` es el único sitio que marca `data-abierto-listo`, y solo cuando `currentSrc` no es el GIF.
 
 ## 2. Atributos en `<html>`
@@ -42,7 +42,7 @@ Reglas:
 | Atributo | Quién lo escribe | Valores / significado |
 |---|---|---|
 | `data-hero` | script del `<head>` (y `principal.js` al degradar) | `animado` · `estatico` (existente) |
-| `data-transicion` | script del `<head>`; `principal.js` lo quita | presente solo si `data-hero="estatico"` y **no** hay movimiento reducido: activa recorrido anclado y progreso por scroll |
+| `data-transicion` | script del `<head>`; `principal.js` lo añade (3D que falla) o lo quita (móvil apaisado bajo) | presente en todo el modo `estatico`, **también con movimiento reducido**: activa recorrido anclado y progreso por scroll |
 | `data-abierto-listo` | `onload` del `<img>` del cráneo abierto | presente cuando la imagen real del cráneo abierto ya cargó; hasta entonces el póster cerrado no desaparece |
 | `data-abierto-fallo` | `principal.js` (evento `error` del `<img>` real) | la imagen abierta falló: el hero queda con el póster cerrado y el eslogan y el botón siempre visibles |
 | `data-bloqueo` | `principal.js` | existente (bloqueo de introducción del 3D) |
@@ -57,7 +57,7 @@ Reglas:
 | `--abierto-izq/-arr/-ancho/-alto`, `--despl-x/-y` | `.hero__poster-caja` | constantes de CSS, una por variante (salida de la herramienta; `< 1024 px` y `≥ 1024 px`) | recuadro de la imagen abierta, en % del rectángulo del póster, y traslación compensatoria |
 | `--recorrido` | `.hero` | CSS (por defecto `80svh`; admitido 60–100 svh) | altura extra del hero en modo transición (`D`) |
 
-Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o `html[data-transicion]` (para que el primer pintado ya sea el cráneo cerrado, sin parpadeo del eslogan) y `1` en el resto (composición final: sin JS, movimiento reducido, móvil apaisado bajo). `principal.js` lo sobrescribe en línea sobre `.hero` cuando hay una fuente activa.
+Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o `html[data-transicion]` (para que el primer pintado ya sea el cráneo cerrado, sin parpadeo del eslogan) y `1` en el resto (composición final: móvil apaisado bajo y sin JS). `principal.js` lo sobrescribe en línea sobre `.hero` cuando hay una fuente activa.
 
 ## 4. Reglas de composición (CSS)
 
@@ -65,7 +65,7 @@ Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o 
 2. **Fundido**: `.hero__poster { opacity: calc(1 − var(--t) * var(--listo)); transform: translate(calc(var(--despl-x) * var(--t)), calc(var(--despl-y) * var(--t))); }` y `.hero__abierto { opacity: var(--t); transform: translate(calc(var(--despl-x) * (var(--t) − 1)), calc(var(--despl-y) * (var(--t) − 1))); }`. Solo `opacity` y `transform`. El póster conserva su `transition: opacity` para que el relevo sea suave.
 3. **Anclaje**: `html[data-transicion] .hero::after { content: ""; display: block; height: var(--recorrido); }` (espaciador dentro del hero: `sticky` solo se mueve dentro del contenido de su padre, no del padding) y `html[data-transicion] .hero__escenario { position: sticky; top: 0; }` (`top: var(--alto-header)` desde 1024 px).
 4. **Móvil apaisado bajo** (`(orientation: landscape) and (max-height: 500px)`): sin anclaje ni recorrido; `--apertura: 1`.
-5. **Movimiento reducido**: `@media (prefers-reduced-motion: reduce)` → `--apertura: 1`, sin `transition` en el hero ni anclaje.
+5. **Movimiento reducido**: `@media (prefers-reduced-motion: reduce)` solo quita las `transition` del canvas y del relevo al 3D; **no** cambia el modo ni la transición por scroll (decisión D-20).
 6. **Con 3D listo** (`.hero__figura.is-3d`): póster e imagen abierta con `opacity: 0` (como hoy el póster).
 7. **Fondo**: `.hero__escenario` con `background-color: var(--color-velo-fondo)` y `background-image` por `@media (orientation: …)`; `background-size: cover; background-position: center`. Se eliminan los degradados de velos del CSS actual.
 8. **Contacto**: `.hero__contacto` sigue con `z-index` por encima de la figura y de la imagen abierta; la barra fija y el botón flotante conservan su `position: fixed`.
@@ -77,7 +77,7 @@ Funciones nuevas (en el mismo IIFE, ≈ 70 líneas):
 
 | Función | Responsabilidad |
 |---|---|
-| `controlarTransicionScroll(hero)` | Si `data-transicion`: calcula `apertura` desde el scroll (ver data-model §3), suaviza con rAF, escribe `--apertura` y `data-revelado` (histéresis existente), pausa fuera de pantalla; escucha `matchMedia` de movimiento reducido y de apaisado bajo para devolver al modo final. Devuelve la función que la desactiva. |
+| `controlarTransicionScroll(hero)` | Si `data-transicion`: calcula `apertura` desde el scroll (ver data-model §3), suaviza con rAF, escribe `--apertura` y `data-revelado` (histéresis existente), pausa fuera de pantalla; Devuelve la función que la desactiva. `activarModoImagenes(motivo)` (llamada al cargar con `estatico` y cuando el 3D falla o se activa «reducir movimiento» con el 3D mostrado) añade `data-transicion`, arranca este control y habilita la imagen abierta; en móvil apaisado bajo (y si se rota a esa posición) pasa a la composición final. |
 | `habilitarImagenAbierta(hero, motivo)` | Recorre los `<source>` de `.hero__abierto` y hace `s.media = s.dataset.media`; el navegador elige y pide la imagen real (y la reelige al cruzar 1024 px). Cuándo: tras `load` + inactividad; con ahorro de datos, en el primer `scroll`; en modo 3D, solo si `--apertura > 0` y aún no hay `is-3d`; al degradar el 3D, de inmediato. También escucha `error` del `<img>` y, si ocurre con una imagen real, marca `data-abierto-fallo`. |
 
 Cambios en lo existente:

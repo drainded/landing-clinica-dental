@@ -142,3 +142,17 @@ Registro de resultados (principio IX). Guía: [quickstart.md](quickstart.md). He
 | VII | Rendimiento en ejecución | ✅ solo `opacity`/`transform`; un `scroll` pasivo con rAF que se detiene al llegar al objetivo o salir de pantalla |
 | VIII | Accesibilidad y responsive | ✅ Lighthouse accesibilidad 100; contraste ≥ 4,5 : 1 medido en los seis tamaños; Tab llega al botón; imágenes decorativas; sin desborde en 360–1920 px (a 195 px desborda el documento por el encabezado y las tarjetas, anterior a esta feature) |
 | IX | Verificación | ⚠️ **pendiente la prueba en móvil real** (T032): inercia real, barra de direcciones y Safari de iOS / Firefox para el cambio dinámico de `media` en los `<source>` |
+
+## Fase 9 · Ajuste tras la prueba en móvil real: solo dos modos (T034–T037)
+
+**Fecha**: 2026-10-23 · prueba en móvil real (Android, Chrome, `http://192.168.1.69:5173`) hecha por el titular del proyecto: la composición se ve bien (cabecera, cráneo abierto, eslogan, botón, «Agende su cita», teléfono, horario y barra fija inferior), pero **sin el cambio de cráneo cerrado → abierto**: el teléfono tiene «quitar animaciones» activo, que Chrome reporta como `prefers-reduced-motion`, y con la versión anterior eso daba la composición final fija. El cliente necesita ver el cambio de pose siempre.
+
+**Decisión (D-20, constitución v2.5.0)**: solo hay dos modos —3D e imágenes— y el de imágenes lleva siempre la transición por scroll, también con «reducir movimiento». Esa preferencia sigue sin recibir el 3D (ni velos que fluyen ni inclinación con el cursor); la transición avanza solo con el scroll de la persona. Riesgo de accesibilidad aceptado y registrado en spec, plan y constitución.
+
+Resultados (Chrome sin interfaz, `hero.mjs modos` y `hero.mjs transicion --perfil movimiento-reducido`), 390 × 844 y 1440 × 900, todos en OK:
+- Movimiento reducido: modo imágenes con el cráneo cerrado, hero anclado (`sticky`) y eslogan/botón ocultos; se pide solo la variante del cráneo abierto de ese tamaño y no se pide three.js ni el `.glb`; mover el cursor no cambia ningún píxel; el scroll lleva `apertura` de 0 a 1 (póster 1 → 0, abierto 0 → 1, eslogan y botón 0 → 1, botón pulsable al final) y vuelve al cerrado al subir.
+- Activar «reducir movimiento» con el 3D ya mostrado: pasa al modo imágenes (cráneo cerrado, sin canvas) y la transición por scroll funciona.
+- El 3D falla (modelo bloqueado; contexto WebGL perdido): pasa al modo imágenes con el cráneo cerrado, **cabecera, cráneo y contacto no se mueven** (rectángulos idénticos) y el scroll abre al cráneo abierto.
+- Imagen del cráneo abierto bloqueada: el póster cerrado se queda y el eslogan y el botón se ven y son pulsables.
+- Móvil apaisado bajo (844 × 390): composición final y página normal (única excepción).
+- Pendiente: repetir en el móvil real (T038).

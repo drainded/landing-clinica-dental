@@ -6,17 +6,17 @@ Fase 0 de `/speckit-plan`. Cada punto sigue el formato *Decisión · Motivo · A
 
 **Hallazgo (código actual)**: `index.html` decide en el `<head>` `data-hero="estatico|animado"` (movimiento reducido, ahorro de datos, memoria ≤ 2 GB o ≤ 2 núcleos → `estatico`). `js/principal.js` activa el *bloqueo de introducción* solo con `animado` y el módulo 3D puede degradar a `estatico` en caliente (sin WebGL, modelo fallido, contexto perdido, FPS bajos en ligero). Hoy el CSS mantiene dos disposiciones distintas (`html[data-hero="animado"]` reorganiza la rejilla; el modo base pone eslogan y botón **debajo** de la figura).
 
-**Decisión**: una sola disposición para todos los modos (la del 3D) y tres «fuentes» del progreso `--apertura`:
+**Decisión**: una sola disposición para los dos modos (la del 3D) y dos «fuentes» del progreso `--apertura` (revisada el 2026-10-23, D-20: «reducir movimiento» ya no quita la transición):
 
 | Modo | Cuándo | Fuente de `--apertura` | Hero |
 |---|---|---|---|
 | 3D (`animado`) | equipo capaz | bloqueo de introducción (ya existe) | no anclado; el cráneo estático sigue el progreso mientras el 3D carga |
-| Estático con transición | `estatico` decidido en el `<head>` y sin movimiento reducido (ahorro de datos, equipo lento) | scroll nativo | **anclado** (`sticky`) durante el recorrido |
-| Estático final | movimiento reducido, sin JS, móvil apaisado bajo, **o degradación en caliente del 3D** | constante `1` | no anclado; composición final sin animación |
+| Imágenes con transición (`estatico`) | `estatico` decidido en el `<head>` (ahorro de datos, equipo lento, «reducir movimiento»), o 3D que falla o se descarta | scroll nativo | **anclado** (`sticky`) durante el recorrido |
+| Composición final (excepción) | móvil apaisado bajo o sin JS | constante `1` | no anclado; sin animación |
 
 **Motivo**: reutiliza el CSS de revelado que ya depende de `--apertura` y garantiza que las posiciones coincidan con el 3D (FR-002) por construcción: es el mismo DOM y las mismas reglas de rejilla.
 
-**Decisión derivada (corrige el spec)**: si el 3D falla *después* de arrancar, **no** se reconfigura el hero para anclarlo (añadir recorrido y `sticky` a mitad de sesión desplazaría el contenido de abajo). Pasa a la composición final. Se ajustaron en `spec.md` el escenario 4 de la historia 4, la regla FR-005 y el caso límite correspondiente. Consecuencia: «sin WebGL» no tiene transición por scroll (solo se descubre tras el primer pintado); sí la tienen ahorro de datos y equipos lentos.
+**Decisión derivada (revisada)**: si el 3D falla *después* de arrancar se pasa al modo de imágenes **en caliente**: se añade `data-transicion` y el espaciador del recorrido queda *bajo* el hero, de modo que el escenario (cráneo, cabecera y contacto) no se mueve; la apertura pasa a salir de la posición de scroll. Se verificó con el modelo bloqueado y con la pérdida del contexto WebGL (rectángulos idénticos antes y después). La versión anterior pasaba a la composición final para no añadir recorrido a mitad de sesión; se descartó al decidir que el cambio de pose debe verse siempre.
 
 **Alternativas**: (a) detectar WebGL en el `<head>` con un `canvas` de prueba → descartado: crea un contexto GPU en la ruta crítica y arriesga el LCP en gama baja; (b) mantener dos disposiciones → descartado: nunca coincidirían con precisión.
 
@@ -74,11 +74,11 @@ Fase 0 de `/speckit-plan`. Cada punto sigue el formato *Decisión · Motivo · A
 | Imagen | Carga | Cómo |
 |---|---|---|
 | Fondo (PC / móvil) | crítica | `background-image` con `@media (orientation: portrait)` (vertical) / apaisado; `preload` con el mismo `media`; `background-color` = token de fondo como respaldo |
-| Cráneo cerrado | crítica | `<img>` actual con `fetchpriority="high"`; `preload` con `media="(prefers-reduced-motion: no-preference)"` |
-| Cráneo abierto (modos con 3D o con transición) | diferida | `<picture>` cuyo `<img>` arranca con un GIF de 1 × 1 en `data:` (sin petición) y cuyos `<source>` llevan `media` con `prefers-reduced-motion: reduce`; `habilitarImagenAbierta` cambia el `media` de los `<source>` (a `(min-width: 1024px)` y `all`) y el navegador pide la imagen real. Cuándo: tras `load` + inactividad; con ahorro de datos, en el primer desplazamiento; en modo 3D, solo si `--apertura > 0` antes de que el 3D esté listo |
-| Cráneo abierto (movimiento reducido / sin JS) | crítica | los `<source>` ya casan por `media`: la imagen real se pide enseguida, con `fetchpriority="high"` y sin `loading="lazy"` (es el LCP de ese modo); `preload` con `media` equivalente |
+| Cráneo cerrado | crítica | `<img>` actual con `fetchpriority="high"` y `preload` |
+| Cráneo abierto | diferida | `<picture>` cuyo `<img>` arranca con un GIF de 1 × 1 en `data:` (sin petición) y cuyos `<source>` llevan `media="not all"`; `habilitarImagenAbierta` cambia el `media` de los `<source>` (a `(min-width: 1024px)` y `all`, atributo `data-media`) y el navegador pide la imagen real. Cuándo: tras `load` + inactividad; con ahorro de datos, en el primer desplazamiento; en modo 3D, solo si `--apertura > 0` antes de que el 3D esté listo; ya, si el 3D falla |
+| Cráneo abierto (móvil apaisado bajo) | inmediata | `habilitarImagenAbierta(hero, "inmediato")` al pasar a la composición final |
 
-**Motivo**: un único `<img>` sirve a todos los modos sin `lazy` ni `display: none` (que dejaban el LCP de movimiento reducido sin prioridad y exigían un truco distinto por navegador). El cráneo cerrado se descarga siempre (24–60 KB): evitarlo en movimiento reducido exigiría otro mecanismo y no compensa. El póster cerrado permanece visible hasta que el abierto carga (`data-abierto-listo`), de modo que el área del cráneo nunca queda vacía, ni siquiera cuando el 3D degrada.
+**Motivo**: un único `<img>` sirve a todos los modos sin `lazy` ni `display: none`. Como «reducir movimiento» ya no tiene un camino propio (eager), el LCP de todos los modos es el póster cerrado y la imagen abierta es siempre diferida. El póster cerrado permanece visible hasta que el abierto carga (`data-abierto-listo`), de modo que el área del cráneo nunca queda vacía, ni siquiera cuando el 3D degrada.
 
 **A verificar** (quickstart E6): que cambiar `source.media` dinámicamente hace que Chrome, Firefox y Safari pidan la imagen; si alguno no lo hiciera, se asigna `srcset` desde `principal.js`.
 

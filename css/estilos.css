@@ -552,16 +552,14 @@ html[data-abierto-fallo] .hero__servicios { pointer-events: auto; }
   .hero__figura { max-width: 17rem; aspect-ratio: 524 / 564; }
 }
 
-/* Composición final (cráneo abierto, eslogan y botón en la boca) sin anclaje ni recorrido: movimiento reducido
-   (también si se activa con la página abierta) y móvil apaisado bajo, donde el hero no cabe en pantalla.
-   js/principal.js escribe --apertura: 1 y quita data-transicion en esos casos; esto evita el salto mientras tanto. */
+/* Solo hay dos modos: 3D e imágenes con la transición por scroll (también con «reducir movimiento»: la transición
+   solo avanza cuando la persona hace scroll). La única excepción es el móvil apaisado bajo, donde el hero no cabe
+   en pantalla: composición final (cráneo abierto, eslogan y botón en la boca) sin anclaje ni recorrido.
+   js/principal.js escribe --apertura: 1 y quita data-transicion; esto evita el salto mientras tanto. */
 @media (prefers-reduced-motion: reduce) {
   .hero__canvas,
   .hero__figura.is-3d .hero__poster,
   .hero__figura.is-3d .hero__abierto { transition: none; }
-  html[data-transicion] .hero { --apertura: 1; }
-  html[data-transicion] .hero::after { display: none; }
-  html[data-transicion] .hero__escenario { position: relative; top: auto; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   html[data-transicion] .hero { --apertura: 1; }

@@ -29,23 +29,23 @@ Guía de validación de extremo a extremo. No contiene código de implementació
 3. **Esperado**: sin pixelado, bandas ni bloques; hilos nítidos; cada texto ≥ 4,5 : 1 (con las zonas de luminancia mínima de [research.md](research.md) R7); los bordes superior e inferior se funden con el color de fondo del hero.
 4. Pestaña Network: solo se pide **una** versión del fondo (apaisada o vertical); rotar el dispositivo re-encuadra sin deformar.
 
-### E4 — Movimiento reducido (US4, SC-004)
+### E4 — Movimiento reducido: el cambio de pose se ve igual (US4, SC-004)
 1. *prefers-reduced-motion: reduce*, recarga.
-2. **Esperado**: la imagen del cráneo abierto se pide enseguida y con prioridad alta (sin `loading="lazy"`; Lighthouse no marca el LCP como diferido); en cuanto llega se ve la composición final (cráneo abierto, eslogan y botón en la boca); no hay petición de `three-dentadura.min.js`; mover el cursor y hacer scroll no cambia ningún píxel del hero (comparar capturas); no hay anclaje (el hero se desplaza normal).
+2. **Esperado**: es el hero de imágenes (sin 3D; no hay petición de `three-dentadura.min.js`); al cargar se ve el cráneo cerrado con el hero anclado y, tras `load`, se pide la imagen del cráneo abierto; el scroll funde el cráneo cerrado con el abierto y aparecen el eslogan y el botón; mover el cursor no cambia ningún píxel del hero (comparar capturas).
 3. Con la red a 3G lenta: hasta que llega el cráneo abierto se ve el cráneo cerrado, nunca el área vacía.
-4. Activar la preferencia con la página ya abierta (modo transición o 3D): pasa a la composición final.
+4. Activar la preferencia con la página ya abierta y el 3D mostrado: pasa al hero de imágenes con el cráneo cerrado (sin mover cabecera ni contacto) y la transición por scroll funciona.
 
 ### E5 — Ahorro de datos, fallos y degradación (US4, SC-008)
 1. *Save-Data*: antes del primer scroll solo se pide el fondo y el cráneo cerrado; en el primer desplazamiento se pide el abierto.
 2. Bloquear `craneo-abierto-*.webp` en DevTools: el hero sigue completo (cráneo cerrado, eslogan y botón visibles, legibles y pulsables).
-3. Bloquear `assets/models/*.glb` o forzar `WEBGL_lose_context` en un equipo capaz: pasa a la composición final, sin mover cráneo, cabecera ni contacto.
+3. Bloquear `assets/models/*.glb` o forzar `WEBGL_lose_context` en un equipo capaz: pasa al hero de imágenes con el cráneo cerrado, sin mover cráneo, cabecera ni contacto, y el scroll abre al cráneo abierto.
 4. Tab desde el inicio: «Conoce nuestros servicios» y «Agende su cita» se alcanzan y el botón se ve con foco aunque `apertura` sea 0.
 
 ### E6 — Presupuesto, carga y LCP (SC-006, SC-007)
 1. *Fast 4G*, CPU 4×, *Disable cache*, 360 × 740 y 1440 × 900, para cada modo (3D, transición, final).
 2. **Esperado**: carga crítica ≤ 500 KB (estimado 140–230 KB); fondo PC ≤ 80 KB, móvil ≤ 50 KB; cada cráneo ≤ 60 KB; 0 peticiones a otro dominio; LCP < 2,5 s; CLS ≈ 0.
 3. Comprobar en Chrome, Firefox y Safari que, en los modos diferidos, la imagen real del cráneo abierto **no** se pide antes de `habilitarImagenAbierta` y que sí se pide al cambiar el `media` de los `<source>` (R6); si alguno no la pide, asignar `srcset` desde `principal.js`.
-4. Con movimiento reducido: grabar un rendimiento de 10 s de scroll y movimiento; en el resto de modos con transición, ≥ 55 fps en escritorio y, con CPU 4×, ≥ 30 fps (FR-017).
+4. Grabar un rendimiento de 10 s de scroll en el hero de imágenes (también con movimiento reducido): ≥ 55 fps en escritorio y, con CPU 4×, ≥ 30 fps (FR-017).
 4. Lighthouse móvil: Rendimiento ≥ 90.
 
 ### E7 — Relevo estático → 3D (US5)

@@ -62,14 +62,12 @@
 
 <link rel="preload" as="image" href="assets/img/fondo-hero-movil.webp" media="(orientation: portrait)">
 <link rel="preload" as="image" href="assets/img/fondo-hero-pc.webp" media="(orientation: landscape)">
-<link rel="preload" as="image" href="assets/img/craneo-cerrado.webp" fetchpriority="high" media="(prefers-reduced-motion: no-preference)">
-<link rel="preload" as="image" href="assets/img/craneo-abierto-escritorio.webp" fetchpriority="high" media="(prefers-reduced-motion: reduce) and (min-width: 1024px)">
-<link rel="preload" as="image" href="assets/img/craneo-abierto-movil.webp" fetchpriority="high" media="(prefers-reduced-motion: reduce) and (max-width: 1023.98px)">
+<link rel="preload" as="image" href="assets/img/craneo-cerrado.webp" fetchpriority="high">
 
 <script>
-/* Decide el modo del hero antes del primer pintado: 'estatico' (imágenes) o 'animado' (3D). Con 'estatico' y sin
-   movimiento reducido añade data-transicion: el scroll funde el cráneo cerrado con el abierto (specs/002) */
-(function(n){var q=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches,s=n.connection&&n.connection.saveData,e=q||s||n.deviceMemory<=2||n.hardwareConcurrency<=2,d=document.documentElement;d.dataset.hero=e?'estatico':'animado';if(e&&!q)d.dataset.transicion=''})(navigator);
+/* Decide el modo del hero antes del primer pintado: 'animado' (3D) o 'estatico' (imágenes). Solo hay esos dos modos:
+   el de imágenes (también con «reducir movimiento») lleva data-transicion y el scroll funde el cráneo cerrado con el abierto (specs/002) */
+(function(n){var q=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches,s=n.connection&&n.connection.saveData,e=q||s||n.deviceMemory<=2||n.hardwareConcurrency<=2,d=document.documentElement;d.dataset.hero=e?'estatico':'animado';if(e)d.dataset.transicion=''})(navigator);
 </script>
 <link rel="stylesheet" href="css/estilos.css">
 </head>
@@ -119,11 +117,10 @@
 
       <div class="hero__figura">
         <div class="hero__poster-caja">
-          <!-- Cráneo abierto: con movimiento reducido los <source> ya casan y la imagen real se pide con prioridad; en el
-               resto de modos js/principal.js cambia su media (data-media) cuando toca, y hasta entonces solo hay un GIF vacío -->
+          <!-- Cráneo abierto: hasta que js/principal.js cambia el media de los <source> (data-media) solo hay un GIF vacío -->
           <picture class="hero__abierto" aria-hidden="true">
-            <source srcset="assets/img/craneo-abierto-escritorio.webp" media="(prefers-reduced-motion: reduce) and (min-width: 1024px)" data-media="(min-width: 1024px)">
-            <source srcset="assets/img/craneo-abierto-movil.webp" media="(prefers-reduced-motion: reduce)" data-media="all">
+            <source srcset="assets/img/craneo-abierto-escritorio.webp" media="not all" data-media="(min-width: 1024px)">
+            <source srcset="assets/img/craneo-abierto-movil.webp" media="not all" data-media="all">
             <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" width="828" height="981" decoding="async" fetchpriority="high" onload="if(this.currentSrc.slice(0,5)!=='data:')document.documentElement.setAttribute('data-abierto-listo','')">
           </picture>
           <img class="hero__poster" src="assets/img/craneo-cerrado.webp" alt="" width="800" height="861" fetchpriority="high">
