@@ -452,12 +452,12 @@
   }
 
   /**
-   * Cráneo abierto del hero estático (contrato §1 y §5): el <img> de .hero__abierto arranca con un GIF vacío y sus
+   * Cráneo abierto del hero estático (contrato §1 y §5): los <img> de .hero__abierto (hueso y dientes) arrancan con un GIF vacío y sus
    * <source> llevan un media que solo casa con movimiento reducido. Aquí se cambia ese media por el de data-media
    * y el navegador elige y pide la imagen real. Cuándo (motivo): "carga" → tras load y con el navegador libre
    * (con ahorro de datos equivale a "apertura"); "apertura" → solo si la persona empieza a abrir el cráneo (y el 3D
    * no está listo: así el eslogan no aparece sobre un cráneo todavía cerrado); "inmediato" → ya. Si la imagen real falla, data-abierto-fallo deja
-   * el póster cerrado con el eslogan y el botón siempre visibles. El onload del <img> marca data-abierto-listo.
+   * el póster cerrado con el eslogan y el botón siempre visibles. El onload de ambos <img> marca data-abierto-listo.
    */
   var imagenAbiertaActivada = false;
 
@@ -469,15 +469,17 @@
   }
 
   function habilitarImagenAbierta(hero, motivo) {
-    var imagen = hero.querySelector(".hero__abierto img");
-    if (imagen && !imagen.getAttribute("data-vigilada")) {
+    // Hueso y dientes del cráneo abierto: si cualquiera de las dos imágenes falla, el póster cerrado se queda
+    var imagenes = hero.querySelectorAll(".hero__abierto img");
+    Array.prototype.forEach.call(imagenes, function (imagen) {
+      if (imagen.getAttribute("data-vigilada")) return;
       imagen.setAttribute("data-vigilada", "");
       imagen.addEventListener("error", function () {
         if (imagen.currentSrc && imagen.currentSrc.slice(0, 5) !== "data:") {
           document.documentElement.setAttribute("data-abierto-fallo", "");
         }
       });
-    }
+    });
     function activar() { activarImagenAbierta(hero); }
     if (motivo === "carga" && navigator.connection && navigator.connection.saveData) motivo = "apertura";
     function cuandoLibre() {

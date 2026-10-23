@@ -160,6 +160,17 @@ Sitio estático plano: `index.html`, `css/estilos.css`, `js/`, `assets/img/`. He
 
 ---
 
+## Phase 11: Dientes blancos como en el 3D (2026-10-23)
+
+**Contexto**: en las imágenes los dientes se veían más azules que en el 3D. Causa: `.hero__figura` mezcla toda la imagen con `multiply` sobre el fondo azulado, y los dientes, que en el 3D se pintan opacos, se multiplicaban por ese color. Una sola imagen con alfa para el hueso no sirve (el degradado translúcido del hueso se rompe en bandas con el alfa con pérdida de WebP, y sin pérdida pesa > 100 KB). **Decisión D-22**: hueso y dientes en capas distintas; el hueso sigue con `multiply` y los dientes van en una figura hermana sin mezcla.
+
+- [X] T043 En `js/dentadura.js` (opción `captura`) devolver también `capas` (hueso solo sobre blanco; dientes solos sobre blanco y sobre negro), guardarlas en `hero.mjs capturar` y reescribir `codificar-craneo.py` con `--capa hueso|dientes` (dientes → RGBA con alfa sin pérdida; el alfa sale de restar el render sobre blanco y sobre negro).
+- [X] T044 Regenerar las seis imágenes (`craneo-cerrado`, `craneo-abierto-movil`, `craneo-abierto-escritorio` y sus `-dientes`), todas ≤ 60 KB, con el mismo recuadro y las mismas dimensiones que antes.
+- [X] T045 `index.html`: `.hero__dientes` (hermana de `.hero__figura`) con sus dos imágenes y `preload` del cerrado; `css/estilos.css`: geometría compartida con `.hero__figura`, sin `multiply`, `pointer-events: none`, retirada con el 3D y cerrado con `1 − t²`; `js/principal.js`: vigilar el error de las dos imágenes del abierto (`data-abierto-listo` solo cuando llegan las dos).
+- [X] T046 Verificar (batería de `hero.mjs`) y registrar en `verificacion.md` (Fase 12); actualizar `assets/models/README.md`, `data-model.md` y el contrato §1.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

@@ -63,6 +63,7 @@
 <link rel="preload" as="image" href="assets/img/fondo-hero-movil.webp" media="(orientation: portrait)">
 <link rel="preload" as="image" href="assets/img/fondo-hero-pc.webp" media="(orientation: landscape)">
 <link rel="preload" as="image" href="assets/img/craneo-cerrado.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/craneo-cerrado-dientes.webp" fetchpriority="high">
 
 <script>
 /* Decide el modo del hero antes del primer pintado: 'animado' (3D) o 'estatico' (imágenes). Solo hay esos dos modos y
@@ -122,9 +123,22 @@
           <picture class="hero__abierto" aria-hidden="true">
             <source srcset="assets/img/craneo-abierto-escritorio.webp" media="not all" data-media="(min-width: 1024px)">
             <source srcset="assets/img/craneo-abierto-movil.webp" media="not all" data-media="all">
-            <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" width="828" height="981" decoding="async" fetchpriority="high" onload="if(this.currentSrc.slice(0,5)!=='data:')document.documentElement.setAttribute('data-abierto-listo','')">
+            <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" width="828" height="981" decoding="async" fetchpriority="high" onload="if(this.currentSrc.slice(0,5)!=='data:'){this.setAttribute('data-real','');if(document.querySelectorAll('.hero__abierto img[data-real]').length>1)document.documentElement.setAttribute('data-abierto-listo','')}">
           </picture>
           <img class="hero__poster" src="assets/img/craneo-cerrado.webp" alt="" width="800" height="861" fetchpriority="high">
+        </div>
+      </div>
+
+      <!-- Dientes: capas con transparencia, hermanas de la figura porque esta se mezcla con multiply (el hueso deja ver
+           el fondo) y los dientes deben ser opacos y blancos como en el 3D. Mismas cajas y mismo fundido que el hueso. -->
+      <div class="hero__dientes" aria-hidden="true">
+        <div class="hero__poster-caja">
+          <picture class="hero__abierto">
+            <source srcset="assets/img/craneo-abierto-escritorio-dientes.webp" media="not all" data-media="(min-width: 1024px)">
+            <source srcset="assets/img/craneo-abierto-movil-dientes.webp" media="not all" data-media="all">
+            <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" width="828" height="981" decoding="async" fetchpriority="high" onload="if(this.currentSrc.slice(0,5)!=='data:'){this.setAttribute('data-real','');if(document.querySelectorAll('.hero__abierto img[data-real]').length>1)document.documentElement.setAttribute('data-abierto-listo','')}">
+          </picture>
+          <img class="hero__poster" src="assets/img/craneo-cerrado-dientes.webp" alt="" width="800" height="861" fetchpriority="high">
         </div>
       </div>
 

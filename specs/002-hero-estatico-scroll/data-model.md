@@ -61,6 +61,9 @@ al volver a lo alto:   apertura = 0 y el bloqueo se rearma
 | `craneo-cerrado` | `assets/img/craneo-cerrado.webp` (se conserva o se regenera con la herramienta) | ≥ 524 × 564; hasta ≈ 800 × 860 si cabe en el límite | ≤ 60 KB | crítica (salvo movimiento reducido) | única |
 | `craneo-abierto-escritorio` | `assets/img/craneo-abierto-escritorio.webp` | recuadro ampliado respecto a la figura | ≤ 60 KB | diferida (crítica con movimiento reducido) | `min-width: 1024px` |
 | `craneo-abierto-movil` | `assets/img/craneo-abierto-movil.webp` | ídem | ≤ 60 KB | ídem | resto |
+| `craneo-cerrado-dientes`, `craneo-abierto-escritorio-dientes`, `craneo-abierto-movil-dientes` | `assets/img/craneo-*-dientes.webp` | mismas medidas y recuadro que el hueso de su pose; WebP con alfa sin pérdida | ≤ 60 KB (18–32 KB) | como el hueso de su pose | como el hueso de su pose |
+
+Los dientes van en una capa aparte (`.hero__dientes`, hermana de `.hero__figura` y sin `multiply`) para que sean blancos y opacos como en el 3D; el hueso (`.hero__figura`) se mezcla con `multiply`. Decisión D-22.
 
 Todas son decorativas (`alt=""`, `aria-hidden`) y declaran `width`/`height`.
 

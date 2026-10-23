@@ -487,6 +487,22 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
         ponerPose(acota(apertura));
         renderer.render(escena, camara);
         const imagen = canvas.toDataURL("image/png");
+        // Capas por separado (hueso solo; dientes solos sobre blanco y sobre negro): permiten componer un WebP con
+        // transparencia en el que los dientes son opacos, como en el 3D, y el hueso se oscurece como con multiply
+        const colorBlanco = (Math.round(blanco.x * 255) << 16) | (Math.round(blanco.y * 255) << 8) | Math.round(blanco.z * 255);
+        const dibujarCapa = (hueso, dientes, fondo) => {
+          modelo.traverse((o) => { if (o.isMesh) o.visible = o.material === matDientes ? dientes : hueso; });
+          renderer.setClearColor(fondo);
+          renderer.render(escena, camara);
+          return canvas.toDataURL("image/png");
+        };
+        const capas = {
+          hueso: dibujarCapa(true, false, colorBlanco),
+          dientesBlanco: dibujarCapa(false, true, colorBlanco),
+          dientesNegro: dibujarCapa(false, true, 0x000000)
+        };
+        modelo.traverse((o) => { if (o.isMesh) o.visible = true; });
+        renderer.setClearColor(colorBlanco);
         const fija = aPantalla(puntoFijo.clone().project(camara), r);
 
         // Caja que envuelve al modelo visible (se descarta la bóveda ya desvanecida), en % del rectángulo del póster
@@ -512,6 +528,7 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
         const cy1 = Math.min(r.bottom, y1 + margen * ph);
         const resultado = {
           imagen,
+          capas,
           recuadro: { izq: ((cx0 - poster.left) / pw) * 100, arr: ((cy0 - poster.top) / ph) * 100, ancho: ((cx1 - cx0) / pw) * 100, alto: ((cy1 - cy0) / ph) * 100 },
           desplazamiento: { x: ((fija.x - base.x) / pw) * 100, y: ((fija.y - base.y) / ph) * 100 },
           posterPx: { x: poster.left - r.left, y: poster.top - r.top, w: pw, h: ph },

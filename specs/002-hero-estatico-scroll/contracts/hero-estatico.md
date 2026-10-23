@@ -24,6 +24,11 @@ Extiende `specs/001-dentadura-3d-hero/contracts/hero-dentadura.md`. Lo no mencio
      </div>
     </div>
 
+    <!-- D-22 · Dientes: capas con alfa, hermana de la figura y SIN multiply (blancos y opacos como en el 3D). Misma
+         estructura: .hero__poster-caja > picture.hero__abierto (sources …-dientes.webp, mismo data-media) + img.hero__poster
+         (craneo-cerrado-dientes.webp). .hero__abierto img[data-real] ×2 → data-abierto-listo; error de cualquiera → data-abierto-fallo -->
+    <div class="hero__dientes" aria-hidden="true">…</div>
+
     <div class="hero__revelado">…eslogan + «Conoce nuestros servicios»…</div>  <!-- sin cambios de contenido -->
     <div class="hero__contacto">…</div>                                      <!-- sin cambios -->
   </div>

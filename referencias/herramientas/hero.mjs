@@ -205,7 +205,10 @@ async function capturar(base, o) {
       const r = await pagina.evaluar(`window.__craneo.capturar(${fase})`);
       const nombre = `craneo-${fase}-${ancho}x${alto}`;
       await writeFile(path.join(salida, nombre + ".png"), Buffer.from(r.imagen.split(",")[1], "base64"));
-      const { imagen, ...datos } = r;
+      for (const [capa, datosCapa] of Object.entries(r.capas)) {
+        await writeFile(path.join(salida, `${nombre}-${capa}.png`), Buffer.from(datosCapa.split(",")[1], "base64"));
+      }
+      const { imagen, capas, ...datos } = r;
       await writeFile(path.join(salida, nombre + ".json"), JSON.stringify({ ancho, alto, fase, ...datos }, null, 2));
       const rc = datos.recuadro;
       console.log(`${nombre}: recuadro ${rc.izq.toFixed(1)} / ${rc.arr.toFixed(1)} / ${rc.ancho.toFixed(1)} × ${rc.alto.toFixed(1)} % · desplazamiento ${datos.desplazamiento.x.toFixed(2)}, ${datos.desplazamiento.y.toFixed(2)} %`);
@@ -273,11 +276,14 @@ async function pantalla(base, o) {
   const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "normal", chrome: o.chrome });
   try {
     await pagina.ir(base + "index.html");
-    await pagina.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000);
+    // Con un perfil que no es «normal» el hero va en modo de imágenes: no hay canvas que esperar
+    if ((o.perfil || "normal") === "normal") await pagina.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000);
+    else await pagina.esperarHasta("document.querySelector('.hero__poster').complete", 30000);
     await esperar(1500);
     const clip = async () => pagina.evaluar(`(() => { const b = document.querySelector('.hero__escenario').getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, width: b.width, height: b.height }; })()`);
     await writeFile(path.join(salida, `${prefijo}-0-${ancho}x${alto}.png`), await pagina.pantalla(await clip()));
-    await pagina.evaluar(`document.getElementById('inicio').style.setProperty('--apertura', '1'); document.dispatchEvent(new CustomEvent('dentadura:apertura', { detail: { progreso: 1 } }))`);
+    const abrir = Number(o.apertura ?? 1);
+    await pagina.evaluar(`document.getElementById('inicio').style.setProperty('--apertura', '${abrir}'); document.dispatchEvent(new CustomEvent('dentadura:apertura', { detail: { progreso: ${abrir} } }))`);
     await esperar(3500);
     await writeFile(path.join(salida, `${prefijo}-1-${ancho}x${alto}.png`), await pagina.pantalla(await clip()));
     console.log(`${prefijo}-0|1-${ancho}x${alto}.png guardadas en ${salida}`);
