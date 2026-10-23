@@ -259,23 +259,28 @@ section { padding: var(--espacio-7) 0; }
 }
 
 /* ---------- 5. Hero ---------- */
-/* Modo base = estático: póster del cráneo cerrado sobre un degradado de velos, eslogan y
-   «Servicios» visibles, flujo normal. Con data-hero="animado" js/dentadura.js dibuja un canvas
-   (velos que siguen al cursor + radiografía 3D) detrás del contenido, y la mandíbula se abre
-   con el scroll (--apertura la publica js/principal.js). */
+/* Una sola disposición para todos los modos (specs/002-hero-estatico-scroll): el escenario mide el resto de la
+   pantalla y el eslogan y «Servicios» van superpuestos a la figura, en el hueco de la boca abierta, igual que en el
+   3D, de modo que las imágenes estáticas y el canvas coinciden en posición. --apertura (0–1) gobierna el revelado:
+   la escribe js/principal.js (bloqueo de introducción en el modo 3D, scroll en el estático con transición). Por
+   defecto vale 1 (composición final: sin JS, movimiento reducido, móvil apaisado bajo). Con data-hero="animado"
+   js/dentadura.js dibuja un canvas (velos que siguen al cursor + radiografía 3D) detrás del contenido. */
 .hero {
   position: relative;
   padding: 0;
   color: var(--color-texto);
+  --apertura: 1;
 }
+html[data-hero="animado"] .hero,
+html[data-transicion] .hero { --apertura: 0; }
 .hero__escenario {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: calc(100svh - var(--alto-barra-fija) - var(--alto-header-movil));
+  height: calc(100svh - var(--alto-barra-fija) - var(--alto-header-movil));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   justify-items: center;
   gap: var(--espacio-2);
   padding: var(--espacio-3) var(--espacio-3) var(--espacio-2);
@@ -329,17 +334,26 @@ section { padding: var(--espacio-7) 0; }
   width: 100%;
   max-width: 44rem;
   min-height: 0;
-  height: min(56svh, 32rem);
-}
-html[data-hero="animado"] .hero__figura { height: auto; }
-/* El cráneo arranca ya «acercado»; el póster y el 3D comparten esta escala (js/dentadura.js mide el recuadro ya escalado) */
-.hero__figura {
+  /* Contenedor de tamaño: .hero__poster-caja mide el rectángulo «contain» del póster con unidades de contenedor */
+  container-type: size;
+  /* El cráneo arranca ya «acercado»; las imágenes y el 3D comparten esta escala (js/dentadura.js mide el recuadro ya escalado) */
   transform: scale(var(--escala-figura));
-  /* el póster es opaco y blanco: multiplicar deja ver los velos a través del hueso
+  /* el póster es opaco y blanco: multiplicar deja ver el fondo a través del hueso
      (va en la figura, no en la imagen, porque transform crea su propio contexto de apilamiento) */
   mix-blend-mode: multiply;
 }
+/* Rectángulo del póster (proporción fija 524:564, centrado, como object-fit: contain): es la referencia de
+   js/dentadura.js para calibrar la cámara y de las imágenes del cráneo (póster y cráneo abierto) */
+.hero__poster-caja {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(100cqw, calc(100cqh * 524 / 564));
+  aspect-ratio: 524 / 564;
+  transform: translate(-50%, -50%);
+}
 .hero__poster {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -356,14 +370,23 @@ html[data-hero="animado"] .hero__figura { height: auto; }
   border-radius: 8px;
 }
 
+/* Sobre la figura: eslogan y botón juntos, en la parte baja de la boca abierta */
 .hero__revelado {
-  grid-row: 3;
+  grid-row: 2;
+  align-self: stretch;
+  justify-self: stretch;
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--espacio-2);
+  justify-content: center;
+  gap: .5rem;
+  padding-top: 10%;
+  /* Revelado del eslogan y «Servicios» ligado a --apertura. Solo opacity/transform; el botón sigue en el
+     orden de tabulación y se muestra con foco. */
+  --rev-eslogan: clamp(0, (var(--apertura, 0) - 0.3) / 0.3, 1);
+  --rev-boton: clamp(0, (var(--apertura, 0) - 0.4) / 0.3, 1);
 }
 .hero__eslogan {
   font-family: var(--fuente-titulos);
@@ -374,11 +397,33 @@ html[data-hero="animado"] .hero__figura { height: auto; }
   margin: 0;
   color: var(--color-acento-oscuro);
   text-shadow: 0 0 .3rem var(--color-superficie);
+  opacity: var(--rev-eslogan);
+  transform: translateY(calc((1 - var(--rev-eslogan)) * 18px));
+}
+.hero__servicios {
+  opacity: var(--rev-boton);
+  transform: translateY(calc((1 - var(--rev-boton)) * 14px));
 }
 .hero__servicios svg { width: 1.1em; height: 1.1em; }
+/* Mientras el progreso lo gobierna el 3D o el scroll, el botón solo recibe clics una vez revelado */
+html[data-hero="animado"] .hero__revelado,
+html[data-transicion] .hero__revelado { pointer-events: none; }
+html[data-hero="animado"] .hero__servicios,
+html[data-transicion] .hero__servicios { pointer-events: none; }
+html[data-hero="animado"] #inicio[data-revelado] .hero__servicios,
+html[data-transicion] #inicio[data-revelado] .hero__servicios,
+.hero__servicios:focus-visible {
+  pointer-events: auto;
+}
+.hero__servicios:focus-visible {
+  opacity: 1;
+  transform: none;
+}
 .hero__contacto {
+  grid-row: 3;
   position: relative;
   z-index: 3;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -399,48 +444,9 @@ html[data-hero="animado"] .hero__figura { height: auto; }
   font-size: .9rem;
   color: var(--color-texto-suave);
   margin: 0;
+  /* Una línea reservada: el texto llega por JavaScript (data-campo) y, sin esto, movería la fila central */
+  min-height: 1.6em;
   text-shadow: 0 0 .25rem var(--color-superficie);
-}
-
-/* Modo animado: el escenario mide exactamente el resto de la pantalla. La apertura de la mandíbula no
-   depende de la posición de scroll sino del bloqueo de introducción de js/principal.js (--apertura). */
-html[data-hero="animado"] .hero__escenario {
-  height: calc(100svh - var(--alto-barra-fija) - var(--alto-header-movil));
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-/* Sobre la figura: eslogan y botón juntos, en la parte baja de la boca abierta */
-html[data-hero="animado"] .hero__revelado {
-  grid-row: 2;
-  align-self: stretch;
-  justify-content: center;
-  gap: .5rem;
-  padding-top: 10%;
-}
-html[data-hero="animado"] .hero__contacto { grid-row: 3; }
-
-/* Revelado del eslogan y «Servicios» ligado a --apertura (0–1, lo escribe js/principal.js).
-   Solo opacity/transform; el botón sigue en el orden de tabulación y se muestra con foco. */
-html[data-hero="animado"] .hero__revelado {
-  --rev-eslogan: clamp(0, (var(--apertura, 0) - 0.3) / 0.3, 1);
-  --rev-boton: clamp(0, (var(--apertura, 0) - 0.4) / 0.3, 1);
-  pointer-events: none;
-}
-html[data-hero="animado"] .hero__eslogan {
-  opacity: var(--rev-eslogan);
-  transform: translateY(calc((1 - var(--rev-eslogan)) * 18px));
-}
-html[data-hero="animado"] .hero__servicios {
-  opacity: var(--rev-boton);
-  transform: translateY(calc((1 - var(--rev-boton)) * 14px));
-  pointer-events: none;
-}
-html[data-hero="animado"] #inicio[data-revelado] .hero__servicios,
-html[data-hero="animado"] .hero__servicios:focus-visible {
-  pointer-events: auto;
-}
-html[data-hero="animado"] .hero__servicios:focus-visible {
-  opacity: 1;
-  transform: none;
 }
 
 @media (max-height: 700px) {
@@ -453,21 +459,20 @@ html[data-hero="animado"] .hero__servicios:focus-visible {
 }
 @media (min-width: 1024px) {
   /* En escritorio la boca abierta es más baja: subir el grupo para ver los dientes de arriba y de abajo */
-  html[data-hero="animado"] .hero__revelado { padding-top: 5%; padding-bottom: 0; }
+  .hero__revelado { padding-top: 5%; padding-bottom: 0; }
   .hero__eslogan { max-width: 40ch; }
-  .hero__escenario { min-height: calc(100svh - var(--alto-header)); }
-  html[data-hero="animado"] .hero__escenario { height: calc(100svh - var(--alto-header)); }
+  .hero__escenario { height: calc(100svh - var(--alto-header)); }
 }
 
 /* Móvil en horizontal: la pantalla es muy baja (≈ 300 px útiles). El hero deja de ajustarse a la
-   pantalla, mide lo que necesita su contenido y la figura se acota; se desplaza como una página normal. */
+   pantalla, mide lo que necesita su contenido y la figura se acota; se desplaza como una página normal.
+   Con container-type: size la figura no aporta tamaño propio: su alto sale de la proporción del póster. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .hero__escenario,
-  html[data-hero="animado"] .hero__escenario {
+  .hero__escenario {
     height: auto;
     min-height: 26rem;
   }
-  .hero__figura { max-width: 17rem; }
+  .hero__figura { max-width: 17rem; aspect-ratio: 524 / 564; }
 }
 
 /* ---------- 6. Servicios ---------- */

@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, "..", "..");
 const PERFILES_CHROME = path.join(AQUI, "perfil-chrome");
+const SALIDA_DEP = path.join(AQUI, "salida", "depurar");
 const TAMANOS = [[360, 740], [390, 844], [768, 1024], [1024, 768], [1440, 900], [1920, 1080]];
 const BANDERAS = [
   "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist",
@@ -139,6 +140,8 @@ async function abrirPagina({ ancho, alto, perfil = "normal", chrome }) {
     await cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   }
   if (SCRIPT_PERFIL[perfil]) await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: SCRIPT_PERFIL[perfil] });
+  // Desplazamiento acumulado de diseño (CLS) de la carga, disponible en window.__cls
+  await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__cls=0;window.__clsDet=[];try{new PerformanceObserver((l)=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__cls+=e.value;window.__clsDet.push({v:+e.value.toFixed(4),t:Math.round(e.startTime),n:e.sources.map((x)=>[x.node?((x.node.className&&x.node.className.baseVal===undefined?x.node.className:'')||x.node.nodeName):'?',[x.previousRect.x,x.previousRect.y,x.previousRect.width,x.previousRect.height].map(Math.round),[x.currentRect.x,x.currentRect.y,x.currentRect.width,x.currentRect.height].map(Math.round)])})}}).observe({type:'layout-shift',buffered:true})}catch(_){}" });
 
   const peticiones = [];
   cdp.oyentes.set("Network.requestWillBeSent", new Set([(p) => peticiones.push(p.request.url)]));
@@ -223,7 +226,15 @@ async function medirCajas(pagina, base, apertura = 1) {
   await esperar(500);
   await pagina.evaluar(`document.getElementById('inicio').style.setProperty('--apertura','${apertura}')`);
   await esperar(500);
-  return pagina.evaluar(EXPRESION_CAJAS);
+  const datos = await pagina.evaluar(EXPRESION_CAJAS);
+  datos.cls = await pagina.evaluar("window.__cls");
+  datos.clsDetalle = await pagina.evaluar("window.__clsDet");
+  // Con la boca cerrada el eslogan y el botón no se ven; el resto del hero sí
+  await pagina.evaluar(`document.getElementById('inicio').style.setProperty('--apertura','0')`);
+  await esperar(500);
+  datos.cerrado = await pagina.evaluar(`(() => { const o = (s) => +getComputedStyle(document.querySelector(s)).opacity;
+    return { eslogan: o('.hero__eslogan'), boton: o('.hero__servicios'), titulo: o('.hero__titulo'), contacto: o('.hero__contacto'), poster: o('.hero__poster') }; })()`);
+  return datos;
 }
 
 async function cajas(base, o) {
@@ -234,7 +245,9 @@ async function cajas(base, o) {
     try {
       const datos = await medirCajas(pagina, base);
       await writeFile(path.join(salida, `cajas-${ancho}x${alto}.json`), JSON.stringify({ ancho, alto, ...datos }, null, 2));
-      console.log(`cajas-${ancho}x${alto}.json · desborde horizontal: ${datos.desbordeHorizontal}`);
+      if (datos.cls > 0.001) console.log('  desplazamientos:', JSON.stringify(datos.clsDetalle));
+      const c = datos.cerrado;
+      console.log(`cajas-${ancho}x${alto}.json · desborde horizontal: ${datos.desbordeHorizontal} · CLS: ${Number(datos.cls).toFixed(4)} · boca cerrada: eslogan ${c.eslogan}, botón ${c.boton}, título ${c.titulo}, contacto ${c.contacto}, póster ${c.poster}`);
     } finally {
       await pagina.cerrar();
     }
@@ -268,10 +281,129 @@ async function pantalla(base, o) {
   }
 }
 
+/* ---------- comparar: hero estático frente a hero 3D ---------- */
+
+// Se ejecuta dentro de la página: caja envolvente de los píxeles que no son casi blancos, ignorando las máscaras
+const ANALIZAR = `(async (src, region, mascaras, umbral) => {
+  const img = new Image(); img.src = src; await img.decode();
+  const c = document.createElement('canvas'); c.width = region.w; c.height = region.h;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(img, -region.x, -region.y);
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+    const i = (y * c.width + x) * 4;
+    if (Math.min(d[i], d[i + 1], d[i + 2]) >= umbral) continue;
+    let dentro = false;
+    for (const k of mascaras) if (x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h) { dentro = true; break; }
+    if (dentro) continue;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return { x0, y0, x1, y1 };
+})`;
+
+const EXPRESION_GEOMETRIA = `(() => {
+  const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; };
+  return { escenario: r('.hero__escenario'), poster: r('.hero__poster-caja') };
+})()`;
+
+const CLAVES_TEXTO = ["cabecera", "eslogan", "boton", "contacto", "figura"];
+const UMBRAL_BLANCO = 225;
+const TOLERANCIA_SILUETA = 2;   // % del ancho del rectángulo del póster
+const TOLERANCIA_CAJAS = 0.5;   // px
+
+async function compararTamano(base, ancho, alto, fases, o) {
+  const resultados = [];
+  // 1) Hero 3D con ?captura (mismas cámaras y shaders que el 3D real) y sus cajas de texto
+  const p3d = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
+  const tres = {};
+  try {
+    await p3d.ir(base + "index.html?captura");
+    await p3d.esperarHasta("!!window.__craneo && !!window.__craneo.capturar");
+    await esperar(400);
+    for (const fase of fases) {
+      tres[fase] = { captura: await p3d.evaluar(`window.__craneo.capturar(${fase})`) };
+      await p3d.evaluar(`document.getElementById('inicio').style.setProperty('--apertura', '${fase}')`);
+      await esperar(500);
+      tres[fase].cajas = await p3d.evaluar(EXPRESION_CAJAS);
+    }
+  } finally {
+    await p3d.cerrar();
+  }
+  // 2) Hero estático (equipo lento): fondo blanco y textos invisibles (conservan su caja)
+  const pe = await abrirPagina({ ancho, alto, perfil: o.perfil || "equipo-lento", chrome: o.chrome });
+  try {
+    await pe.ir(base + "index.html");
+    await pe.esperarHasta("document.querySelector('.hero__poster').complete");
+    await pe.evaluar(`(() => { const e = document.createElement('style');
+      e.textContent = '.hero__cabecera,.hero__revelado,.hero__contacto{visibility:hidden!important}.hero__escenario{background:#fff!important}.hero__canvas,.barra-fija,.whatsapp-flotante,.encabezado{display:none!important}';
+      document.head.appendChild(e); })()`);
+    for (const fase of fases) {
+      await pe.evaluar(`document.getElementById('inicio').style.setProperty('--apertura', '${fase}')`);
+      if (fase > 0) await pe.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 30000);
+      await esperar(700);
+      const cajasEst = await pe.evaluar(EXPRESION_CAJAS);
+      const geo = await pe.evaluar(EXPRESION_GEOMETRIA);
+      const esc = geo.escenario;
+      const poster = { x: geo.poster.x - esc.x, y: geo.poster.y - esc.y, w: geo.poster.w, h: geo.poster.h };
+      const clip = { x: esc.x + await pe.evaluar("scrollX"), y: esc.y + await pe.evaluar("scrollY"), width: esc.w, height: esc.h };
+      const png = await pe.pantalla(clip);
+      const srcEst = "data:image/png;base64," + png.toString("base64");
+      if (o.depurar) { await mkdir(SALIDA_DEP, { recursive: true }); await writeFile(path.join(SALIDA_DEP, `estatico-${fase}-${ancho}x${alto}.png`), png); }
+
+      // Máscaras (coordenadas del escenario): cabecera y eslogan ampliados un 5 % del alto, donde actúa el difuminado
+      const m = 0.05 * esc.h;
+      const mascaras = ["cabecera", "eslogan"].map((k) => { const c = cajasEst[k]; return { x: c.x - esc.x - m, y: c.y - esc.y - m, w: c.w + 2 * m, h: c.h + 2 * m }; });
+      const reg = { x: 0, y: 0, w: Math.round(esc.w), h: Math.round(esc.h) };
+      const sEst = await pe.evaluar(`${ANALIZAR}(${JSON.stringify(srcEst)}, ${JSON.stringify(reg)}, ${JSON.stringify(mascaras)}, ${UMBRAL_BLANCO})`);
+
+      // El PNG del 3D está en un lienzo ampliado: su origen respecto al escenario sale de la posición del póster en ambos
+      const cap = tres[fase].captura;
+      if (o.depurar) await writeFile(path.join(SALIDA_DEP, `tres-${fase}-${ancho}x${alto}.png`), Buffer.from(cap.imagen.split(",")[1], "base64"));
+      const regTres = { x: Math.round(cap.posterPx.x - poster.x), y: Math.round(cap.posterPx.y - poster.y), w: reg.w, h: reg.h };
+      const sTres = await pe.evaluar(`${ANALIZAR}(${JSON.stringify(cap.imagen)}, ${JSON.stringify(regTres)}, ${JSON.stringify(mascaras)}, ${UMBRAL_BLANCO})`);
+
+      const dif = (a, b) => ((a - b) / poster.w) * 100;
+      const dev = { izq: dif(sEst.x0, sTres.x0), arr: dif(sEst.y0, sTres.y0), der: dif(sEst.x1, sTres.x1), aba: dif(sEst.y1, sTres.y1) };
+      const maxSilueta = Math.max(...Object.values(dev).map(Math.abs));
+      let maxCajas = 0;
+      for (const k of CLAVES_TEXTO) {
+        // Respecto al origen del escenario (en la página estática se ocultó el encabezado para el análisis)
+        const a = cajasEst[k], b = tres[fase].cajas[k];
+        const oa = cajasEst.escenario, ob = tres[fase].cajas.escenario;
+        const d = { x: (a.x - oa.x) - (b.x - ob.x), y: (a.y - oa.y) - (b.y - ob.y), w: a.w - b.w, h: a.h - b.h };
+        for (const c of ["x", "y", "w", "h"]) maxCajas = Math.max(maxCajas, Math.abs(d[c]));
+      }
+      const difPoster = Math.abs(poster.w - cap.posterPx.w);
+      resultados.push({ ancho, alto, fase, dev, maxSilueta, maxCajas, difPoster, ok: maxSilueta <= TOLERANCIA_SILUETA && maxCajas <= TOLERANCIA_CAJAS });
+    }
+  } finally {
+    await pe.cerrar();
+  }
+  return resultados;
+}
+
+async function comparar(base, o) {
+  const fases = String(o.fase ?? "0").split(",").map(Number);
+  const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : TAMANOS;
+  let fallos = 0;
+  console.log("tamaño      fase  silueta máx (% ancho póster)  [izq arr der aba]        cajas máx (px)  póster Δpx  resultado");
+  for (const [ancho, alto] of tamanos) {
+    for (const r of await compararTamano(base, ancho, alto, fases, o)) {
+      const d = r.dev;
+      console.log(`${String(r.ancho).padStart(4)}×${String(r.alto).padEnd(5)}  ${r.fase}     ${r.maxSilueta.toFixed(2).padStart(6)}                      [${d.izq.toFixed(1)} ${d.arr.toFixed(1)} ${d.der.toFixed(1)} ${d.aba.toFixed(1)}]`.padEnd(98) + `${r.maxCajas.toFixed(2).padStart(6)}        ${r.difPoster.toFixed(1).padStart(5)}      ${r.ok ? "OK" : "FALLA"}`);
+      if (!r.ok) fallos++;
+    }
+  }
+  console.log(fallos ? `${fallos} comparación(es) fuera de tolerancia (silueta ≤ ${TOLERANCIA_SILUETA} %, cajas ≤ ${TOLERANCIA_CAJAS} px)` : "Todas las comparaciones dentro de tolerancia");
+  return fallos ? 1 : 0;
+}
+
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla };
+const COMANDOS = { capturar, cajas, pantalla, comparar };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);
