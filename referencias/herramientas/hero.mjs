@@ -650,6 +650,55 @@ async function modos(base, o) {
   return fallos ? 1 : 0;
 }
 
+/* ---------- relevo: del hero estático al 3D (E7) ---------- */
+
+/**
+ * Red lenta para que el 3D tarde en llegar: se abre la mandíbula con la rueda (bloqueo de introducción) antes de que
+ * cargue, se comprueba que el cráneo estático la sigue y que, al llegar el 3D, nada se mueve.
+ * Uso: relevo [--tamano 390x844] [--kbs 80]
+ */
+async function relevo(base, o) {
+  let fallos = 0;
+  const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
+  const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
+  const kbs = Number(o.kbs || 80);
+  for (const [ancho, alto] of tamanos) {
+    console.log(`\n${ancho}×${alto} · red limitada a ${kbs} KB/s`);
+    const p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
+    try {
+      await p.cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 150, downloadThroughput: kbs * 1024, uploadThroughput: kbs * 1024 });
+      await p.ir(base + "index.html");
+      await esperar(600);
+      const inicio = await p.evaluar(ESTADO_MODOS);
+      ok(!inicio.is3d && inicio.hero === "animado" && inicio.poster === 1 && inicio.eslogan === 0, `antes del 3D: póster cerrado visible y eslogan oculto (póster ${inicio.poster}, eslogan ${inicio.eslogan})`);
+      ok(!p.peticiones.some((u) => u.includes("craneo-abierto")), "el cráneo abierto aún no se ha pedido (nadie ha empezado a abrir)");
+      // Gesto de rueda largo: el bloqueo de introducción lo convierte en apertura
+      await p.cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: Math.round(ancho / 2), y: Math.round(alto / 2), deltaX: 0, deltaY: 900 });
+      await esperar(700);
+      const medio = await p.evaluar(ESTADO_MODOS);
+      ok(p.peticiones.some((u) => u.includes("craneo-abierto")) && !medio.is3d, `al abrir antes de que cargue el 3D se pide el cráneo abierto (apertura ${medio.apertura}, 3D listo: ${medio.is3d})`);
+      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 30000);
+      await esperar(1800);
+      const abierto = await p.evaluar(ESTADO_MODOS);
+      ok(!abierto.is3d && Number(abierto.apertura) === 1 && abierto.abierto === 1 && abierto.poster === 0 && abierto.eslogan === 1, `el cráneo estático sigue la apertura mientras el 3D carga (apertura ${abierto.apertura}, abierto ${abierto.abierto}, póster ${abierto.poster}, eslogan ${abierto.eslogan})`);
+      const antes = abierto.cajas;
+      if (o.depurar) { await mkdir(SALIDA_DEP, { recursive: true }); await writeFile(path.join(SALIDA_DEP, `relevo-antes-${ancho}x${alto}.png`), await p.pantalla()); }
+      // Muestreo de opacidades durante el relevo, para ver que no hay parpadeo (el cráneo nunca desaparece del todo)
+      await p.evaluar("window.__op = []; window.__mu = setInterval(() => { const q = (s) => +getComputedStyle(document.querySelector(s)).opacity; const c = document.querySelector('.hero__canvas'); window.__op.push([q('.hero__poster'), q('.hero__abierto'), c ? +getComputedStyle(c).opacity : 0]); }, 50)");
+      await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 180000);
+      await esperar(1500);
+      const muestras = await p.evaluar("clearInterval(window.__mu), window.__op");
+      const despues = await p.evaluar(ESTADO_MODOS);
+      if (o.depurar) await writeFile(path.join(SALIDA_DEP, `relevo-despues-${ancho}x${alto}.png`), await p.pantalla());
+      ok(despues.is3d && despues.poster === 0 && despues.abierto === 0, `el 3D sustituye a las imágenes estáticas (póster ${despues.poster}, abierto ${despues.abierto}, canvas listo)`);
+      ok(antes === despues.cajas, `cabecera, cráneo y contacto no se mueven en el relevo (${antes === despues.cajas ? "idénticos" : antes + " → " + despues.cajas})`);
+      const hueco = muestras.filter(([po, ab, ca]) => po < 0.5 && ab < 0.5 && ca < 0.5).length;
+      console.log(`  INFO  ${muestras.length} muestras durante el relevo; ${hueco} con póster, abierto y canvas todos por debajo de 0,5 de opacidad (el fundido de 0,35 s del póster/abierto y 0,4 s del canvas se solapan)`);
+    } finally { await p.cerrar(); }
+  }
+  return fallos ? 1 : 0;
+}
+
 /** Utilidad de depuración: evalúa una expresión en la página. Uso: evaluar --tamano 390x844 --js "expresión" [--perfil p] [--ir ruta] */
 async function evaluar(base, o) {
   const [ancho, alto] = String(o.tamano || "1440x900").split("x").map(Number);
@@ -666,7 +715,7 @@ async function evaluar(base, o) {
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red, modos };
+const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red, modos, relevo };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);

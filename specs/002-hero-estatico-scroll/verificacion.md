@@ -90,3 +90,12 @@ Registro de resultados (principio IX). Guía: [quickstart.md](quickstart.md). He
 - **Teclado**: Tab llega a «Conoce nuestros servicios» y lo muestra con foco (verificado en la Fase 4; la regla `:focus-visible` gana ahora a `pointer-events: none`).
 - **LCP**: Chrome sin interfaz no emitió el evento de LCP; el elemento LCP de cada modo se confirma con Lighthouse en T031.
 - **Nota**: en 844 × 390 el botón «Agende su cita» queda bajo el pliegue de la página normal (no se considera «tapado»: es una página con scroll nativo y el contacto sigue en la barra fija).
+
+## Fase 7 · US5 — Relevo del hero estático al 3D (T028–T029)
+
+**Fecha**: 2026-10-22 · `hero.mjs relevo` (red limitada a 80 KB/s para que el 3D tarde en llegar; gesto de rueda largo antes de que cargue), 390 × 844 y 1440 × 900. Todos los escenarios en OK.
+
+- Antes del 3D: póster cerrado visible y eslogan oculto; el cráneo abierto **no** se ha pedido.
+- Al abrir con el bloqueo de introducción antes de que cargue el 3D (apertura 0,86–0,88): se pide el cráneo abierto; cuando llega, el cráneo estático sigue la apertura (póster 0, abierto 1, eslogan 1) y no queda el eslogan sobre un cráneo cerrado.
+- Al llegar el 3D: póster y abierto pasan a 0 y el canvas queda listo; **cabecera, figura y contacto no se mueven** (rectángulos idénticos antes y después). En 220–230 muestras cada 50 ms ninguna tuvo póster, abierto y canvas a la vez por debajo de 0,5 de opacidad: **sin parpadeo**.
+- **Cambio de fondo en el relevo** (riesgo R6b, revisión visual en 1440 × 900): al llegar el 3D, el fondo pasa de la imagen (pálida, hilos finos) a los velos procedimentales del 3D (más saturados) con el fundido de 0,4 s existente. Las posiciones son idénticas y el cambio se lee como un cambio de ambiente, no como un salto. **Decisión pendiente del cliente**: aceptarlo tal cual o abrir una spec para usar la imagen (o sus tonos) también en el 3D.

@@ -119,8 +119,8 @@ Sitio estático plano: `index.html`, `css/estilos.css`, `js/`, `assets/img/`. He
 
 **Independent Test**: en un equipo capaz con red limitada, hacer scroll en cuanto aparece la página, antes de que cargue el 3D (E7).
 
-- [ ] T028 [US5] En `js/principal.js` añadir a `habilitarImagenAbierta` el motivo `3d`: en modo `animado`, escuchar `dentadura:apertura` y, cuando `--apertura > 0` y aún no exista `.is-3d` en la figura, activarla (si el 3D ya está listo no se pide). Depende de T017.
-- [ ] T029 [US5] Verificar E7: con red limitada, abrir con el scroll de introducción antes de que cargue el 3D y comprobar que el cráneo estático se abre en sincronía; al llegar el 3D, con `hero.mjs`/CDP medir que cráneo, cabecera y contacto no se mueven (0 px) y no hay parpadeo; valorar el fundido de 0,4 s del fondo (imagen → velos) y registrar si es aceptable (si no, abrir una spec para usar la imagen también en el 3D). Depende de T028, T023.
+- [X] T028 [US5] En `js/principal.js` añadir a `habilitarImagenAbierta` el motivo `3d`: en modo `animado`, escuchar `dentadura:apertura` y, cuando `--apertura > 0` y aún no exista `.is-3d` en la figura, activarla (si el 3D ya está listo no se pide). Depende de T017.
+- [X] T029 [US5] Verificar E7: con red limitada, abrir con el scroll de introducción antes de que cargue el 3D y comprobar que el cráneo estático se abre en sincronía; al llegar el 3D, con `hero.mjs`/CDP medir que cráneo, cabecera y contacto no se mueven (0 px) y no hay parpadeo; valorar el fundido de 0,4 s del fondo (imagen → velos) y registrar si es aceptable (si no, abrir una spec para usar la imagen también en el 3D). Depende de T028, T023.
 
 **Checkpoint**: las cinco historias funcionan de forma independiente.
 

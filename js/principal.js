@@ -562,7 +562,8 @@
    * Cráneo abierto del hero estático (contrato §1 y §5): el <img> de .hero__abierto arranca con un GIF vacío y sus
    * <source> llevan un media que solo casa con movimiento reducido. Aquí se cambia ese media por el de data-media
    * y el navegador elige y pide la imagen real. Cuándo (motivo): "transicion" → tras load y con el navegador libre
-   * (con ahorro de datos, en el primer scroll); "inmediato" → ya. Si la imagen real falla, data-abierto-fallo deja
+   * (con ahorro de datos, en el primer scroll); "3d" → solo si la persona empieza a abrir la mandíbula antes de que
+   * el 3D esté listo (así el eslogan no aparece sobre un cráneo todavía cerrado); "inmediato" → ya. Si la imagen real falla, data-abierto-fallo deja
    * el póster cerrado con el eslogan y el botón siempre visibles. El onload del <img> marca data-abierto-listo.
    */
   var imagenAbiertaActivada = false;
@@ -595,6 +596,13 @@
     }
     if (motivo === "inmediato") {
       activar();
+    } else if (motivo === "3d") {
+      var alApertura = function (e) {
+        if (!e.detail || !(e.detail.progreso > 0)) return;
+        document.removeEventListener("dentadura:apertura", alApertura);
+        if (!document.querySelector(".hero__figura.is-3d")) activar();   // con el 3D ya listo no hace falta
+      };
+      document.addEventListener("dentadura:apertura", alApertura);
     } else if (navigator.connection && navigator.connection.saveData) {
       window.addEventListener("scroll", activar, { once: true, passive: true });
     } else {
@@ -661,6 +669,7 @@
     document.addEventListener("dentadura:estado", function (e) {
       if (e.detail && e.detail.estado === "estatico") habilitarImagenAbierta(hero, "inmediato");
     });
+    if (!captura) habilitarImagenAbierta(hero, "3d");
 
     var nivel = elegirNivel();
     var rutaModelo = nivel === "ligero" ? RUTA_MODELO_LIGERO : RUTA_MODELO_COMPLETO;
