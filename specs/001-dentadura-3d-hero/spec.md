@@ -8,6 +8,10 @@
 
 **Input**: User description (original): "Dentadura 3D interactiva en el hero de la landing de la Clínica Dental Dr. Héctor Manuel Rojas Pérez (Atlacomulco): contorno verde y relleno blanco, mandíbula cerrada al cargar, se deforma con el cursor/toque y se abre con el scroll; al abrirse se revelan el eslogan y un botón «Servicios». Sustituye al slider de fotos del hero."
 
+> **Actualización 2026-10-22 (spec 002, D-19)**: la versión estática del hero (sin 3D animado) se rediseñó en 
+> [`specs/002-hero-estatico-scroll/`](../002-hero-estatico-scroll/spec.md). Para esa versión, esa spec **sustituye** a FR-002 (fondo sin 3D = degradado: ahora es una imagen con versión de PC y de móvil), FR-009(a), FR-010 y 
+> FR-012/FR-013 (el eslogan y el botón ya no van debajo de la figura: la composición estática es la del 3D, con transición por scroll y, con movimiento reducido, la composición final sin animación) y al supuesto de que el respaldo estático es siempre el cráneo cerrado. El 3D no cambia.
+
 **Revisión 2026-10-12**: el cliente entrega un nuevo modelo (`modelo-craneo-rayosx-dientes-alineados.zip`: cráneo inferior con aspecto de radiografía y dientes blancos) y un boceto. El fondo del hero pasa a ser **velos translúcidos entrelazados que simulan luz y se mueven con el cursor**. El contorno verde y la deformación local del modelo se retiran.
 
 ## Contexto y decisiones previas

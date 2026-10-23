@@ -7,7 +7,31 @@ Modelos usados por el hero (`js/dentadura.js`): cráneo inferior (maxilar y mand
 | `craneo.glb` | Nivel `completo` (escritorio y móvil grande) | 209 KB | ≈ 41 000 (≤ 50 000) |
 | `craneo-ligero.glb` | Nivel `ligero` (táctil con ancho < 768 px) | 74 KB | ≈ 12 300 (≈ 15 000) |
 
-El póster estático que corresponde a estos modelos es `assets/img/craneo-cerrado.webp` (524 × 564 px, ≈ 24 KB): el cráneo cerrado sobre fondo blanco opaco. El sitio lo mezcla con `mix-blend-mode: multiply` para que los velos del fondo se vean a través del hueso.
+El póster estático que corresponde a estos modelos es `assets/img/craneo-cerrado.webp` (800 × 861 px, ≈ 36 KB; antes 524 × 564 px): el cráneo cerrado sobre fondo blanco opaco. El sitio lo mezcla con `mix-blend-mode: multiply` para que los velos del fondo se vean a través del hueso.
+
+## Imágenes del cráneo (hero estático)
+
+Las imágenes estáticas **se generan desde estos mismos modelos** con la opción de captura de `js/dentadura.js` (mismos shaders, cámara, encuadre y difuminado bajo los textos que el 3D), de modo que su posición coincida con la del 3D:
+
+| Archivo | Pose | Uso | Peso |
+|---|---|---|---|
+| `assets/img/craneo-cerrado.webp` | cerrada | LCP y respaldo; 800 × 861 px (proporción 524:564) | 36 KB |
+| `assets/img/craneo-abierto-movil.webp` | abierta (≈ 30°, cámara sobre la boca) | < 1024 px; difuminado horneado a 390 × 844 | 29 KB |
+| `assets/img/craneo-abierto-escritorio.webp` | abierta | ≥ 1024 px; difuminado horneado a 1440 × 900 | 31 KB |
+
+Para regenerarlas (Node ≥ 22, Chrome y Python con Pillow; ver `referencias/herramientas/README.md`):
+
+```bash
+node referencias/herramientas/hero.mjs capturar --ancho 1440 --alto 900 --fase 0,1
+node referencias/herramientas/hero.mjs capturar --ancho 390 --alto 844 --fase 1
+python referencias/herramientas/codificar-craneo.py --captura craneo-0-1440x900 --recorte poster --salida assets/img/craneo-cerrado.webp
+python referencias/herramientas/codificar-craneo.py --captura craneo-1-390x844 --recorte recuadro --salida assets/img/craneo-abierto-movil.webp
+python referencias/herramientas/codificar-craneo.py --captura craneo-1-1440x900 --recorte recuadro --salida assets/img/craneo-abierto-escritorio.webp
+```
+
+`codificar-craneo.py` imprime las constantes (`--abierto-*` y `--despl-*`, en % del rectángulo del póster) que van en `css/estilos.css`. Si se cambia el modelo o el encuadre hay que regenerar las tres imágenes y volver a comprobar la posición con `hero.mjs comparar`.
+
+El fondo del hero estático (`assets/img/fondo-hero-pc.webp` y `fondo-hero-movil.webp`) sale de `referencias/herramientas/generar-fondo.py` (recomposición en el estilo de la imagen original del cliente, con los colores de los tokens).
 
 ## Autoría y licencia
 
