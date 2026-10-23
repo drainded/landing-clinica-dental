@@ -206,10 +206,14 @@ function medirCaja(raiz) {
 }
 
 /**
- * @param {{ hero: HTMLElement, figura: HTMLElement, nivel: "ligero"|"completo", rutaModelo: string, umbralFps?: number }} opciones
- * @returns {Promise<{ destruir(): void, estado(): string, sobreModelo(x: number, y: number, holgura?: number): boolean }>}
+ * `captura` es solo para desarrollo (specs/002-hero-estatico-scroll, contrato §6): sin velos, fondo blanco
+ * opaco, sin bucle de animación, y devuelve capturar(apertura) para generar las imágenes del hero estático
+ * con los mismos shaders, cámara y encuadre que el 3D. Sin ella el comportamiento no cambia.
+ *
+ * @param {{ hero: HTMLElement, figura: HTMLElement, nivel: "ligero"|"completo", rutaModelo: string, umbralFps?: number, captura?: boolean }} opciones
+ * @returns {Promise<{ destruir(): void, estado(): string, sobreModelo(x: number, y: number, holgura?: number): boolean, capturar?(apertura: number): object }>}
  */
-export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 }) {
+export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24, captura = false }) {
   let estado = "cargando";
   let destruido = false;
   const limpiezas = [];
@@ -246,7 +250,7 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
     const canvas = document.createElement("canvas");
     canvas.className = "hero__canvas";
     canvas.setAttribute("aria-hidden", "true");
-    const renderer = new WebGLRenderer({ canvas, antialias: nivel === "completo", alpha: false, powerPreference: "high-performance" });
+    const renderer = new WebGLRenderer({ canvas, antialias: nivel === "completo", alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: captura });
     let dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX[nivel] || 1.5);
     renderer.setPixelRatio(dpr);
     escenario.insertBefore(canvas, escenario.firstChild);
@@ -313,7 +317,12 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
     const velos = new Mesh(geoVelos, matVelos);
     velos.frustumCulled = false;
     velos.renderOrder = -1;
-    escena.add(velos);
+    if (captura) {
+      // Fondo blanco opaco (el color del token de superficie): las imágenes del hero estático se mezclan con multiply
+      renderer.setClearColor((Math.round(blanco.x * 255) << 16) | (Math.round(blanco.y * 255) << 8) | Math.round(blanco.z * 255));
+    } else {
+      escena.add(velos);
+    }
 
     /* ---- Modelo ---- */
     const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(rutaModelo);
@@ -420,6 +429,102 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24 
       });
       return encontrado;
     };
+
+    /* ---- Modo captura (solo desarrollo): una pose fija por llamada, sin bucle ni entradas ---- */
+    if (captura) {
+      const puntoFijo = cajaDientes.centro.clone();   // punto del maxilar (no se mueve al abrir la mandíbula)
+      const aPantalla = (p, r) => ({
+        x: r.left + (p.x * 0.5 + 0.5) * r.width,
+        y: r.top + (0.5 - p.y * 0.5) * r.height
+      });
+      const ponerPose = (apertura) => {
+        const o = suaviza(acota(apertura / APERTURA_TRAMO));
+        mandibula.rotation.x = APERTURA_MAX * o;
+        uniformsMascara.uDifumina.value = o;
+        pivote.rotation.set(0, 0, 0);
+        const c = caja.centro;
+        const fx = focoBoca.x * o;
+        const fy = focoBoca.y * o;
+        camara.position.set(c.x + fx, c.y + fy, c.z + distancia);
+        camara.lookAt(c.x + fx, c.y + fy, c.z);
+        camara.updateMatrixWorld(true);
+        pivote.updateMatrixWorld(true);
+      };
+      const capturar = (apertura) => {
+        const e = escenario.getBoundingClientRect();
+        const caja_f = figura.getBoundingClientRect();
+        // Rectángulo que ocupa el póster dentro de la figura (object-fit: contain, proporción fija): las medidas
+        // se dan respecto a él porque, a diferencia de la caja de la figura, no cambia de proporción con la ventana
+        let pw = caja_f.width;
+        let ph = caja_f.height;
+        if (pw / ph > aspectoPoster) pw = ph * aspectoPoster; else ph = pw / aspectoPoster;
+        const poster = { left: caja_f.left + (caja_f.width - pw) / 2, top: caja_f.top + (caja_f.height - ph) / 2, width: pw, height: ph };
+
+        // El cráneo acercado desborda el lienzo (por los lados en móvil; por arriba al abrir la boca): se agranda el
+        // lienzo (misma escala de píxeles, cajas de texto desplazadas, difuminado calculado sobre la altura original)
+        // hasta contener el póster entero con margen, por los lados y por arriba
+        const h = Math.max(1, Math.round(e.height));
+        const izqRel = poster.left - e.left;
+        const ex = Math.ceil(Math.max(0, 0.03 * pw - izqRel, izqRel + 1.03 * pw - Math.round(e.width)));
+        const W = Math.max(1, Math.round(e.width)) + 2 * ex;
+        const ey = Math.ceil(0.2 * ph);
+        const H = h + ey;
+        const px = renderer.getPixelRatio();
+        renderer.setSize(W, H, false);
+        camara.aspect = W / H;
+        camara.fov = 2 * MathUtils.radToDeg(Math.atan(tanMedio * H / h));   // misma distancia focal en píxeles
+        const cx = caja_f.left - e.left + caja_f.width / 2 + ex;
+        const cy = caja_f.top - e.top + caja_f.height / 2 + ey;
+        camara.setViewOffset(W, H, W / 2 - cx, H / 2 - cy, W, H);
+        const desplazar = (c) => [c[0] + ex * px, c[1], c[2] + ex * px, c[3]];
+        uniformsMascara.uRes.value.set(W * px, h * px);   // la máscara usa y desde el borde superior original
+        uniformsMascara.uCajaA.value = desplazar(uniformsMascara.uCajaA.value);
+        uniformsMascara.uCajaB.value = desplazar(uniformsMascara.uCajaB.value);
+        const r = { left: e.left - ex, top: e.top - ey, width: W, height: H, right: e.left - ex + W, bottom: e.top - ey + H };
+
+        ponerPose(0);
+        const base = aPantalla(puntoFijo.clone().project(camara), r);
+        ponerPose(acota(apertura));
+        renderer.render(escena, camara);
+        const imagen = canvas.toDataURL("image/png");
+        const fija = aPantalla(puntoFijo.clone().project(camara), r);
+
+        // Caja que envuelve al modelo visible (se descarta la bóveda ya desvanecida), en % del rectángulo del póster
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        modelo.traverse((o) => {
+          if (!o.isMesh) return;
+          const pos = o.geometry.getAttribute("position");
+          for (let i = 0; i < pos.count; i++) {
+            vertice.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+            if (vertice.y > DESVANECE.y) continue;
+            const p = aPantalla(vertice.project(camara), r);
+            if (p.x < x0) x0 = p.x;
+            if (p.x > x1) x1 = p.x;
+            if (p.y < y0) y0 = p.y;
+            if (p.y > y1) y1 = p.y;
+          }
+        });
+        // 2 % del póster alrededor, recortado al lienzo (solo existen los píxeles que se renderizaron)
+        const margen = 0.02;
+        const cx0 = Math.max(r.left, x0 - margen * pw);
+        const cy0 = Math.max(r.top, y0 - margen * ph);
+        const cx1 = Math.min(r.right, x1 + margen * pw);
+        const cy1 = Math.min(r.bottom, y1 + margen * ph);
+        const resultado = {
+          imagen,
+          recuadro: { izq: ((cx0 - poster.left) / pw) * 100, arr: ((cy0 - poster.top) / ph) * 100, ancho: ((cx1 - cx0) / pw) * 100, alto: ((cy1 - cy0) / ph) * 100 },
+          desplazamiento: { x: ((fija.x - base.x) / pw) * 100, y: ((fija.y - base.y) / ph) * 100 },
+          posterPx: { x: poster.left - r.left, y: poster.top - r.top, w: pw, h: ph },
+          lienzoPx: { w: W, h: H },
+          dpr: px
+        };
+        camara.fov = FOV;
+        medir();   // devuelve el lienzo, la cámara y las cajas de texto a su estado normal
+        return resultado;
+      };
+      cambiarEstado("pausado");
+      return { destruir, estado: () => estado, sobreModelo: (x, y, holgura) => sobreModelo(x, y, holgura), capturar };
+    }
 
     /* ---- Entradas: scroll (apertura) y puntero (velos + inclinación) ---- */
     let apertura = acota(parseFloat(getComputedStyle(hero).getPropertyValue("--apertura")) || 0);

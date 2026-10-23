@@ -9,7 +9,8 @@ Extiende `specs/001-dentadura-3d-hero/contracts/hero-dentadura.md`. Lo no mencio
   <div class="hero__escenario">                       <!-- fondo (imagen) + sticky en modo transición -->
     <div class="hero__cabecera">…logo + <h1>…</div>   <!-- sin cambios -->
 
-    <div class="hero__figura">                        <!-- escala de arranque y multiply: sin cambios -->
+    <div class="hero__figura">                        <!-- escala de arranque y multiply: sin cambios; container-type: size -->
+     <div class="hero__poster-caja">                  <!-- NUEVO · rectángulo del póster (contain, 524:564) -->
       <picture class="hero__abierto" aria-hidden="true">          <!-- NUEVO · debajo del póster -->
         <source srcset="assets/img/craneo-abierto-escritorio.webp"
                 media="(prefers-reduced-motion: reduce) and (min-width: 1024px)" data-media="(min-width: 1024px)">
@@ -20,6 +21,7 @@ Extiende `specs/001-dentadura-3d-hero/contracts/hero-dentadura.md`. Lo no mencio
              onload="if(this.currentSrc.slice(0,5)!=='data:')document.documentElement.setAttribute('data-abierto-listo','')">
       </picture>
       <img class="hero__poster" src="assets/img/craneo-cerrado.webp" alt="" width="…" height="…" fetchpriority="high">
+     </div>
     </div>
 
     <div class="hero__revelado">…eslogan + «Conoce nuestros servicios»…</div>  <!-- sin cambios de contenido -->
@@ -30,6 +32,7 @@ Extiende `specs/001-dentadura-3d-hero/contracts/hero-dentadura.md`. Lo no mencio
 
 Reglas:
 
+- **Rectángulo del póster**: `.hero__figura` es contenedor (`container-type: size`) y `.hero__poster-caja` mide `width: min(100cqw, calc(100cqh * 524 / 564)); aspect-ratio: 524 / 564`, centrado (`position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%)`). Es el mismo rectángulo `contain` que usa `js/dentadura.js` para calibrar la cámara, de modo que el póster, el cráneo abierto y el 3D comparten referencia. El póster ocupa el 100 % de la caja; el cráneo abierto se coloca con `left/top/width/height` en % de la caja. Con `container-type: size` la figura no aporta tamaño intrínseco: en móvil apaisado bajo (`height: auto`) se le da `aspect-ratio: 524 / 564`.
 - La imagen abierta y el póster son decorativos; no hay texto horneado en ninguna imagen; el orden de tabulación no cambia (la figura lleva `role="button"` solo en modo 3D).
 - **Carga del cráneo abierto**: en movimiento reducido (o sin JS) los `<source>` apuntan a la imagen real y el navegador la pide enseguida y con prioridad alta (es el LCP de ese modo). En el resto de modos solo se ve el GIF de 1×1 (sin petición) hasta que `habilitarImagenAbierta` cambia el `media` de los `<source>` (ver §5). No hay `loading="lazy"` ni `display: none`.
 - El `onload` del `<img>` es el único sitio que marca `data-abierto-listo`, y solo cuando `currentSrc` no es el GIF.
@@ -51,7 +54,7 @@ Reglas:
 | `--apertura` | `.hero` | `principal.js` (bloqueo o scroll); `1` por defecto en CSS | gobierna `t`, revelado y fundido |
 | `--t` | `.hero` | CSS (`smoothstep(clamp(var(--apertura) / .7))`) | fundido póster/abierto, traslación, (3D) mandíbula |
 | `--listo` | `html` | CSS: `0` por defecto, `1` con `html[data-abierto-listo]` | el póster solo se oculta cuando `--listo` es `1` |
-| `--abierto-izq/-arr/-ancho/-alto`, `--despl-x/-y` | `.hero__figura` | constantes de CSS (salida de la herramienta) | recuadro de la imagen abierta y traslación compensatoria |
+| `--abierto-izq/-arr/-ancho/-alto`, `--despl-x/-y` | `.hero__poster-caja` | constantes de CSS, una por variante (salida de la herramienta; `< 1024 px` y `≥ 1024 px`) | recuadro de la imagen abierta, en % del rectángulo del póster, y traslación compensatoria |
 | `--recorrido` | `.hero` | CSS (por defecto `80svh`; admitido 60–100 svh) | altura extra del hero en modo transición (`D`) |
 
 Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o `html[data-transicion]` (para que el primer pintado ya sea el cráneo cerrado, sin parpadeo del eslogan) y `1` en el resto (composición final: sin JS, movimiento reducido, móvil apaisado bajo). `principal.js` lo sobrescribe en línea sobre `.hero` cuando hay una fuente activa.
@@ -89,7 +92,8 @@ Cambios en lo existente:
 `iniciar({ …, captura: true })`:
 
 - No añade la malla de velos; limpia a blanco opaco; `preserveDrawingBuffer: true`; no inicia el bucle ni el pausado por visibilidad.
-- Devuelve además `capturar(apertura: number)`, que renderiza ese cuadro y responde `{ imagen: <data URL PNG>, recuadro: {izq, arr, ancho, alto}, desplazamiento: {x, y}, figuraPx: {x, y, w, h}, lienzoPx: {w, h}, dpr }`. `recuadro` y `desplazamiento` en % de la figura; `figuraPx`, `lienzoPx` y `dpr` permiten recortar el PNG sin ambigüedad.
+- Devuelve además `capturar(apertura: number)`, que renderiza ese cuadro y responde `{ imagen: <data URL PNG>, recuadro: {izq, arr, ancho, alto}, desplazamiento: {x, y}, posterPx: {x, y, w, h}, lienzoPx: {w, h}, dpr }`. `recuadro` y `desplazamiento` se dan en % del **rectángulo del póster** (el rectángulo `contain` de proporción fija que ocupa el póster dentro de la figura; la caja de la figura cambia de proporción con la ventana y no sirve de referencia); `posterPx`, `lienzoPx` y `dpr` permiten recortar el PNG sin ambigüedad.
+- Como el cráneo acercado desborda el lienzo (por los lados en móvil; por arriba al abrir la boca), `capturar` agranda temporalmente el lienzo (misma escala de píxeles, cajas de texto desplazadas, difuminado calculado con la altura original) hasta contener el póster con un 3 % de margen y después lo restaura. El `recuadro` ya viene acotado a los píxeles renderizados.
 - Con `captura` ausente o `false` el comportamiento es **idéntico** al actual (la verificación lo comprueba por diferencia de imagen).
 
 ## 7. Herramientas de desarrollo (no se publican)
@@ -99,7 +103,7 @@ Ubicación: `referencias/herramientas/` (la ruta `/referencias/*` responde 404 e
 | Archivo | Entrada → salida |
 |---|---|
 | `hero.mjs` | Un solo script de Node (sin dependencias; Chrome sin interfaz con CDP) con subcomandos y `--perfil normal \| movimiento-reducido \| equipo-lento \| ahorro-datos` (inyecta `deviceMemory = 1`, `navigator.connection.saveData = true` o emula `prefers-reduced-motion`). **`capturar`**: tamaño y fase 0/1 → PNG y JSON del §6 en `salida/`. **`cajas`**: tamaños de referencia → `salida/cajas-<ancho>x<alto>.json` con los rectángulos de cabecera, eslogan, botón, teléfono y horario. **`comparar`**: tamaños de referencia → desviación de silueta del cráneo (% del ancho de la figura) y de cajas entre hero estático y 3D. |
-| `codificar-craneo.py` | PNG + JSON → recorte con `figuraPx`/`lienzoPx` → reescalado a `--ancho-final` (800 px por defecto, Lanczos) → WebP ≤ 60 KB (calidad ajustable). |
+| `codificar-craneo.py` | PNG + JSON → recorte (`--recorte poster` para el cerrado, `recuadro` para el abierto) con `posterPx`/`lienzoPx` → reescalado con `--ancho-poster` (800 px por defecto: misma densidad para todas las imágenes) → WebP ≤ 60 KB; imprime las constantes de CSS. |
 | `generar-fondo.py` | `fondo-hero-estatico.jpg` + paleta → `fondo-hero-pc.webp`, `fondo-hero-movil.webp`; con `--medir` lee los `cajas-*.json` e imprime el contraste por caja de texto. |
 
 Todos se ejecutan a mano; ninguno se importa desde el sitio.

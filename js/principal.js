@@ -463,7 +463,11 @@
 
   function iniciarDentadura() {
     var raiz = document.documentElement;
-    if (raiz.dataset.hero !== "animado" || esEquipoModesto()) {
+    // Solo desarrollo (specs/002-hero-estatico-scroll, contrato §5): ?captura carga el 3D sin bloqueo ni espera
+    // y expone window.__craneo para generar las imágenes del hero estático (referencias/herramientas/hero.mjs)
+    var captura = /[?&]captura(?:[&=]|$)/.test(window.location.search);
+    if (captura) raiz.dataset.hero = "animado";
+    if (raiz.dataset.hero !== "animado" || (!captura && esEquipoModesto())) {
       raiz.dataset.hero = "estatico";
       return;
     }
@@ -475,7 +479,7 @@
       return;
     }
 
-    var liberarBloqueo = publicarApertura(hero);
+    var liberarBloqueo = captura ? function () {} : publicarApertura(hero);
 
     var nivel = elegirNivel();
     var rutaModelo = nivel === "ligero" ? RUTA_MODELO_LIGERO : RUTA_MODELO_COMPLETO;
@@ -503,12 +507,14 @@
             figura: figura,
             nivel: nivel,
             rutaModelo: rutaModelo,
-            umbralFps: UMBRAL_FPS_MIN
+            umbralFps: UMBRAL_FPS_MIN,
+            captura: captura
           });
         })
         .then(function (resultado) {
           instancia = resultado;
           detectorModelo = resultado && resultado.sobreModelo ? resultado.sobreModelo : null;
+          if (captura) window.__craneo = resultado;
         })
         .catch(function () {
           raiz.dataset.hero = "estatico";
@@ -523,7 +529,8 @@
         else cargar();
       }, RETRASO_3D_TRAS_CARGA_MS);
     }
-    if (document.readyState === "complete") programarCarga();
+    if (captura) cargar();
+    else if (document.readyState === "complete") programarCarga();
     else window.addEventListener("load", programarCarga, { once: true });
   }
 
