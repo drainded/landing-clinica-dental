@@ -6,7 +6,7 @@ Extiende `specs/001-dentadura-3d-hero/contracts/hero-dentadura.md`. Lo no mencio
 
 ```html
 <section class="hero" id="inicio" aria-label="Presentación de la clínica">
-  <div class="hero__escenario">                       <!-- fondo (imagen) + sticky en modo transición -->
+  <div class="hero__escenario">                       <!-- fondo (imagen); sin anclaje -->
     <div class="hero__cabecera">…logo + <h1>…</div>   <!-- sin cambios -->
 
     <div class="hero__figura">                        <!-- escala de arranque y multiply: sin cambios; container-type: size -->
@@ -41,31 +41,29 @@ Reglas:
 
 | Atributo | Quién lo escribe | Valores / significado |
 |---|---|---|
-| `data-hero` | script del `<head>` (y `principal.js` al degradar) | `animado` · `estatico` (existente) |
-| `data-transicion` | script del `<head>`; `principal.js` lo añade (3D que falla) o lo quita (móvil apaisado bajo) | presente en todo el modo `estatico`, **también con movimiento reducido**: activa recorrido anclado y progreso por scroll |
+| `data-hero` | script del `<head>` (y `principal.js` al degradar) | `animado` · `estatico` (los dos modos; los dos usan el bloqueo de introducción) |
 | `data-abierto-listo` | `onload` del `<img>` del cráneo abierto | presente cuando la imagen real del cráneo abierto ya cargó; hasta entonces el póster cerrado no desaparece |
 | `data-abierto-fallo` | `principal.js` (evento `error` del `<img>` real) | la imagen abierta falló: el hero queda con el póster cerrado y el eslogan y el botón siempre visibles |
-| `data-bloqueo` | `principal.js` | existente (bloqueo de introducción del 3D) |
+| `data-bloqueo` | `principal.js` | bloqueo de introducción activo (los dos modos) |
 
 ## 3. Propiedades CSS
 
 | Propiedad | Dónde | Quién | Uso |
 |---|---|---|---|
-| `--apertura` | `.hero` | `principal.js` (bloqueo o scroll); `1` por defecto en CSS | gobierna `t`, revelado y fundido |
+| `--apertura` | `.hero` | `principal.js` (bloqueo de introducción); `0` con `html[data-hero]`, `1` sin JS | gobierna `t`, revelado y fundido |
 | `--t` | `.hero` | CSS (`smoothstep(clamp(var(--apertura) / .7))`) | fundido póster/abierto, traslación, (3D) mandíbula |
 | `--listo` | `html` | CSS: `0` por defecto, `1` con `html[data-abierto-listo]` | el póster solo se oculta cuando `--listo` es `1` |
 | `--abierto-izq/-arr/-ancho/-alto`, `--despl-x/-y` | `.hero__poster-caja` | constantes de CSS, una por variante (salida de la herramienta; `< 1024 px` y `≥ 1024 px`) | recuadro de la imagen abierta, en % del rectángulo del póster, y traslación compensatoria |
-| `--recorrido` | `.hero` | CSS (por defecto `80svh`; admitido 60–100 svh) | altura extra del hero en modo transición (`D`) |
 
-Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o `html[data-transicion]` (para que el primer pintado ya sea el cráneo cerrado, sin parpadeo del eslogan) y `1` en el resto (composición final: móvil apaisado bajo y sin JS). `principal.js` lo sobrescribe en línea sobre `.hero` cuando hay una fuente activa.
+Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero]` (para que el primer pintado ya sea el cráneo cerrado, sin parpadeo del eslogan; también en móvil apaisado bajo no, donde vale `1`) y `1` sin JS (composición final). `principal.js` lo sobrescribe en línea sobre `.hero` con el progreso del bloqueo.
 
 ## 4. Reglas de composición (CSS)
 
 1. **Disposición única**: `html[data-hero="animado"]` deja de condicionar la rejilla; la figura es `height: auto`, el escenario mide `calc(100svh − barra − encabezado)` y `.hero__revelado` se superpone a la figura (`grid-row: 2`), como en el 3D. La disposición antigua (altura `min(56svh, 32rem)` y eslogan debajo) se elimina.
 2. **Fundido**: `.hero__poster { opacity: calc(1 − var(--t) * var(--listo)); transform: translate(calc(var(--despl-x) * var(--t)), calc(var(--despl-y) * var(--t))); }` y `.hero__abierto { opacity: var(--t); transform: translate(calc(var(--despl-x) * (var(--t) − 1)), calc(var(--despl-y) * (var(--t) − 1))); }`. Solo `opacity` y `transform`. El póster conserva su `transition: opacity` para que el relevo sea suave.
-3. **Anclaje**: `html[data-transicion] .hero::after { content: ""; display: block; height: var(--recorrido); }` (espaciador dentro del hero: `sticky` solo se mueve dentro del contenido de su padre, no del padding) y `html[data-transicion] .hero__escenario { position: sticky; top: 0; }` (`top: var(--alto-header)` desde 1024 px).
-4. **Móvil apaisado bajo** (`(orientation: landscape) and (max-height: 500px)`): sin anclaje ni recorrido; `--apertura: 1`.
-5. **Movimiento reducido**: `@media (prefers-reduced-motion: reduce)` solo quita las `transition` del canvas y del relevo al 3D; **no** cambia el modo ni la transición por scroll (decisión D-20).
+3. **Sin anclaje**: el hero no usa `position: sticky` ni espaciador de recorrido; la presentación la gobierna el bloqueo de introducción (los eventos de rueda, toque y teclado no desplazan la página mientras está activo).
+4. **Móvil apaisado bajo** (`(orientation: landscape) and (max-height: 500px)`): `html[data-hero] .hero { --apertura: 1 }`, sin bloqueo (lo libera `principal.js`); página normal.
+5. **Movimiento reducido**: `@media (prefers-reduced-motion: reduce)` solo quita las `transition` del canvas y del relevo al 3D; **no** cambia el modo ni el bloqueo de introducción (decisiones D-20 y D-21).
 6. **Con 3D listo** (`.hero__figura.is-3d`): póster e imagen abierta con `opacity: 0` (como hoy el póster).
 7. **Fondo**: `.hero__escenario` con `background-color: var(--color-velo-fondo)` y `background-image` por `@media (orientation: …)`; `background-size: cover; background-position: center`. Se eliminan los degradados de velos del CSS actual.
 8. **Contacto**: `.hero__contacto` sigue con `z-index` por encima de la figura y de la imagen abierta; la barra fija y el botón flotante conservan su `position: fixed`.
@@ -73,19 +71,19 @@ Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o 
 
 ## 5. `js/principal.js`
 
-Funciones nuevas (en el mismo IIFE, ≈ 70 líneas):
+Función nueva (en el mismo IIFE, ≈ 40 líneas); el modo de imágenes reutiliza `publicarApertura`:
 
 | Función | Responsabilidad |
 |---|---|
-| `controlarTransicionScroll(hero)` | Si `data-transicion`: calcula `apertura` desde el scroll (ver data-model §3), suaviza con rAF, escribe `--apertura` y `data-revelado` (histéresis existente), pausa fuera de pantalla; Devuelve la función que la desactiva. `activarModoImagenes(motivo)` (llamada al cargar con `estatico` y cuando el 3D falla o se activa «reducir movimiento» con el 3D mostrado) añade `data-transicion`, arranca este control y habilita la imagen abierta; en móvil apaisado bajo (y si se rota a esa posición) pasa a la composición final. |
-| `habilitarImagenAbierta(hero, motivo)` | Recorre los `<source>` de `.hero__abierto` y hace `s.media = s.dataset.media`; el navegador elige y pide la imagen real (y la reelige al cruzar 1024 px). Cuándo: tras `load` + inactividad; con ahorro de datos, en el primer `scroll`; en modo 3D, solo si `--apertura > 0` y aún no hay `is-3d`; al degradar el 3D, de inmediato. También escucha `error` del `<img>` y, si ocurre con una imagen real, marca `data-abierto-fallo`. |
+| `publicarApertura(hero)` (existente) | Bloqueo de introducción: se activa en los **dos** modos de `iniciarDentadura`; ya no se libera cuando el 3D pasa a `estatico` (el progreso continúa). Escribe `--apertura`, `data-revelado`, el evento `dentadura:apertura` y `data-bloqueo`; el clic sobre el cráneo (abrir/cerrar) funciona en los dos modos. |
+| `habilitarImagenAbierta(hero, motivo)` | Recorre los `<source>` de `.hero__abierto` y hace `s.media = s.dataset.media`; el navegador elige y pide la imagen real (y la reelige al cruzar 1024 px). Motivos: `carga` (tras `load` + inactividad; con ahorro de datos equivale a `apertura`), `apertura` (solo cuando la apertura pasa de 0 y el 3D no está listo) e `inmediato` (el 3D falla o se descarta). También escucha `error` del `<img>` y, si ocurre con una imagen real, marca `data-abierto-fallo`. |
 
 Cambios en lo existente:
 
-- `publicarApertura` (bloqueo) sigue igual.
-- `iniciarDentadura` al degradar el 3D: escribe `--apertura: 1`, llama a `habilitarImagenAbierta` de inmediato y **no** añade `data-transicion` ni recorrido. Mientras la imagen abierta no esté lista se ve el póster cerrado (puede haber un cambio breve de pose; aceptado).
+- `publicarApertura` (bloqueo): sin cambios de lógica; solo se quita la liberación al pasar a `estatico` y la condición que lo limitaba al modo `animado`.
+- `iniciarDentadura`: en el modo de imágenes llama a `publicarApertura` y a `habilitarImagenAbierta(hero, "carga")`; al degradar el 3D (evento `dentadura:estado`, error al importar el módulo o «reducir movimiento» en vivo) llama a `habilitarImagenAbierta(hero, "inmediato")` sin tocar el bloqueo. Mientras la imagen abierta no esté lista se ve el póster cerrado.
 - Con `?captura` en la URL (solo desarrollo, ≈ 8 líneas): no registra el bloqueo, no espera el retraso de carga, llama a `iniciar({ …, captura: true })` y expone el resultado en `window.__craneo`. Sin el parámetro no cambia nada.
-- El script del `<head>` añade `data-transicion` según R1 (≈ +80 bytes).
+- El script del `<head>` solo decide `data-hero` (`animado` | `estatico`).
 
 ## 6. `js/dentadura.js` — opción de captura (solo desarrollo)
 

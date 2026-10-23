@@ -1,5 +1,23 @@
 <!--
 Sync Impact Report
+- Version change: 2.5.0 → 2.6.0 (MINOR: la excepción del «bloqueo de introducción» del principio II se amplía
+  de uno a los dos modos del hero; no se elimina ningún principio ni se debilita el acceso a contacto)
+- Modified principles:
+  - II. Contacto primero: el bloqueo de introducción (las primeras acciones de scroll abren el cráneo con
+    velocidad máxima, sin desplazar la página) se aplica también al hero de imágenes, incluso con
+    `prefers-reduced-motion`, ahorro de datos o equipo lento; se retira la condición (4) que lo prohibía en esos
+    casos y se sustituye por «no se activa sin JavaScript ni en móvil apaisado bajo». Siguen vigentes las demás
+    condiciones (una sola vez, salidas de emergencia, sin `overflow: hidden`, contacto visible, zoom libre).
+    Motivo: en la prueba en móvil real la transición por scroll normal pasaba de golpe y pedía desplazar mucho.
+  - VI. Adaptación al dispositivo: el nivel (a) usa ese mismo bloqueo en lugar de una transición por scroll
+    anclado; sigue sin movimiento propio ni efecto del cursor.
+  - Riesgo de accesibilidad registrado: con «reducir movimiento» se intercepta el scroll durante la apertura
+    (≈ 1 s como mínimo; liberable con Tab, anclas o la barra de scroll).
+- Follow-up TODOs:
+  - SPEC.md: D-21 registrada.
+-->
+<!--
+Sync Impact Report
 - Version change: 2.4.0 → 2.5.0 (MINOR: el respaldo de imágenes del hero lleva siempre la transición por scroll,
   también con «reducir movimiento»; no se elimina ningún principio ni se toca el scroll nativo ni el contacto)
 - Modified principles:
@@ -133,11 +151,7 @@ teclas de desplazamiento) pueden avanzar la animación de entrada del hero, con 
 máxima, en lugar de desplazar la página; así un gesto largo no se salta la presentación. El bloqueo
 MUST: (1) terminar al completarse la animación (unos segundos como máximo) y volver a armarse solo
 al regresar al inicio del todo tras haber bajado (la mandíbula se cierra y se vuelve a abrir); (2) no tapar ni retrasar el contacto: la barra fija, el botón flotante, el teléfono y
-los enlaces siguen visibles y pulsables durante el bloqueo; (3) liberarse de inmediato con la
-navegación por teclado (Tab), con un clic en un ancla interna, con cualquier desplazamiento externo
-(barra de scroll, buscar en la página, ancla en la URL), al pasar a modo estático y si la página se
-carga ya desplazada; (4) no activarse con `prefers-reduced-motion`, ahorro de datos, equipo lento
-ni sin 3D; (5) implementarse interceptando los eventos de entrada, nunca con `overflow: hidden` en
+los enlaces siguen visibles y pulsables durante el bloqueo; (3) liberarse de inmediato con la navegación por teclado (Tab), con un clic en un ancla interna, con cualquier desplazamiento externo (barra de scroll, buscar en la página, ancla en la URL), en móvil apaisado bajo (el hero no cabe en pantalla) y si la página se carga ya desplazada; (4) aplicarse igual a los dos modos del hero (3D e imágenes), también con `prefers-reduced-motion`, ahorro de datos y equipo lento, y no activarse sin JavaScript; (5) implementarse interceptando los eventos de entrada, nunca con `overflow: hidden` en
 `<html>`/`<body>` ni con un scroll simulado; (6) no interceptar el zoom del navegador. Fuera de
 este caso el scroll nativo es siempre libre. Todo cambio MUST preservar la funcionalidad existente
 (anclas, inyección por `data-campo`, datos del hero). El slider de fotos fue retirado por la
@@ -189,10 +203,7 @@ máximo 60 KB cada una, y de un fondo de imagen con versión para PC (máximo 80
 Tres niveles:
 - (a) Con `prefers-reduced-motion`, ahorro de datos, equipo lento o sin WebGL: solo las imágenes
   estáticas del respaldo (cráneo cerrado y abierto sobre el fondo de imagen), sin 3D ni scroll
-  suave. Todos esos casos (también «reducir movimiento») reciben el mismo hero de imágenes, con una
-  transición por el scroll nativo que anima solo `opacity`/`transform`, avanza únicamente con el
-  scroll de la persona (sin movimiento propio, sin efecto del cursor), nunca bloquea el scroll y no
-  es «scroll suave» (Lenis). Solo hay dos modos: el 3D y el de imágenes.
+  suave. Todos esos casos (también «reducir movimiento») reciben el mismo hero de imágenes, con el mismo bloqueo de introducción del principio II: las primeras acciones de scroll abren el cráneo (fundido de `opacity`/`transform` del cerrado al abierto, con el eslogan y el botón apareciendo poco a poco), sin movimiento propio ni efecto del cursor y sin ser «scroll suave» (Lenis). Solo hay dos modos: el 3D y el de imágenes.
 - (b) Móvil: modelo ligero y límite de resolución de pantalla del render.
 - (c) Escritorio: versión completa.
 La detección usa características disponibles, con degradación segura cuando una API no exista
@@ -247,4 +258,4 @@ material, PATCH para aclaraciones y redacción. Los planes (`plan.md`) MUST incl
 verificación de cumplimiento con los nueve principios, y toda desviación MUST justificarse por
 escrito.
 
-**Version**: 2.5.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-23
+**Version**: 2.6.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-23

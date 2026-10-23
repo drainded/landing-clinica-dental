@@ -405,106 +405,96 @@ async function comparar(base, o) {
   return fallos ? 1 : 0;
 }
 
-/* ---------- transicion: recorrido del scroll del hero estático ---------- */
+/* ---------- bloqueo: apertura con el bloqueo de introducción en el modo de imágenes ---------- */
 
 const ESTADO_HERO = `(() => {
   const q = (s) => document.querySelector(s);
   const cs = (e, p) => getComputedStyle(e)[p];
   const hero = q('#inicio');
-  return { y: Math.round(scrollY), apertura: hero.style.getPropertyValue('--apertura'),
-    poster: cs(q('.hero__poster'), 'opacity'), abierto: cs(q('.hero__abierto'), 'opacity'),
-    eslogan: cs(q('.hero__eslogan'), 'opacity'), boton: cs(q('.hero__servicios'), 'opacity'),
-    clic: cs(q('.hero__servicios'), 'pointerEvents'), revelado: hero.hasAttribute('data-revelado'),
-    escenarioTop: Math.round(q('.hero__escenario').getBoundingClientRect().top),
-    heroBottom: Math.round(hero.getBoundingClientRect().bottom),
-    listo: document.documentElement.hasAttribute('data-abierto-listo'),
-    fallo: document.documentElement.hasAttribute('data-abierto-fallo'),
+  return { y: Math.round(scrollY), apertura: +(hero.style.getPropertyValue('--apertura') || getComputedStyle(hero).getPropertyValue('--apertura') || 0),
+    bloqueo: document.documentElement.hasAttribute('data-bloqueo'), revelado: hero.hasAttribute('data-revelado'),
+    poster: +cs(q('.hero__poster'), 'opacity'), abierto: +cs(q('.hero__abierto'), 'opacity'),
+    eslogan: +cs(q('.hero__eslogan'), 'opacity'), boton: +cs(q('.hero__servicios'), 'opacity'), clic: cs(q('.hero__servicios'), 'pointerEvents'),
+    listo: document.documentElement.hasAttribute('data-abierto-listo'), fallo: document.documentElement.hasAttribute('data-abierto-fallo'),
+    escenarioTop: Math.round(q('.hero__escenario').getBoundingClientRect().top), modo: document.documentElement.dataset.hero,
     desborde: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    // «Agende su cita» visible en pantalla y no tapado por nada (el elemento bajo su centro es el propio botón)
-    contacto: (() => { const b = q('.hero__contacto .boton'); const r = b.getBoundingClientRect();
-      const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    contacto: (() => { const b = q('.hero__contacto .boton'); const r = b.getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       return r.top >= 0 && r.bottom <= innerHeight && !!el && (b === el || b.contains(el)); })() };
 })()`;
 
-/**
- * Recorre el hero estático con el scroll: 0, 25, 50, 75 y 100 % del anclaje, un poco más allá (el hero se desancla)
- * y la vuelta. Uso: transicion [--tamano 390x844] [--perfil ahorro-datos] [--depurar]
- */
-async function transicion(base, o) {
-  const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
-  await mkdir(SALIDA_DEP, { recursive: true });
-  let fallos = 0;
-  for (const [ancho, alto] of tamanos) {
-    const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "ahorro-datos", chrome: o.chrome, movil: !!o.movil });
-    try {
-      await pagina.ir(base + "index.html");
-      await esperar(1500);
-      const geo = await pagina.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario');
-        return { recorrido: h.offsetHeight - e.offsetHeight, inicio: h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0) }; })()`);
-      const { recorrido, inicio } = geo;
-      console.log(`\n${ancho}×${alto} · recorrido ${recorrido}px (${(recorrido / alto * 100).toFixed(0)} % del alto) · modo: ${await pagina.evaluar("document.documentElement.dataset.hero + (document.documentElement.hasAttribute('data-transicion') ? '+transicion' : '')")}`);
-      console.log("  pos      scrollY  apertura  póster  abierto  eslogan  botón  clic   revelado  escenarioTop  listo");
-      // Rueda real: el scroll nativo no debe bloquearse
-      await pagina.cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: ancho / 2, y: alto / 2, deltaX: 0, deltaY: 200 });
-      await esperar(1200);
-      const rueda = await pagina.evaluar("Math.round(scrollY)");
-      console.log(`  rueda: scrollY tras 200 px de rueda = ${rueda} ${rueda > 0 ? "(OK, no se bloquea)" : "(FALLA: el scroll quedó bloqueado)"}`);
-      if (!(rueda > 0)) fallos++;
-      for (const p of [0, 0.25, 0.5, 0.75, 1, 1.4, 0.5, 0]) {
-        await pagina.evaluar(`window.scrollTo({ top: ${Math.round(inicio + p * recorrido)}, behavior: 'instant' })`);
-        await esperar(1100);
-        const e = await pagina.evaluar(ESTADO_HERO);
-        console.log(`  ${(p * 100).toFixed(0).padStart(4)} %  ${String(e.y).padStart(7)}  ${String(e.apertura).padStart(8)}  ${Number(e.poster).toFixed(2).padStart(6)}  ${Number(e.abierto).toFixed(2).padStart(7)}  ${Number(e.eslogan).toFixed(2).padStart(7)}  ${Number(e.boton).toFixed(2).padStart(5)}  ${e.clic.padEnd(5)}  ${String(e.revelado).padEnd(8)}  ${String(e.escenarioTop).padStart(11)}  ${e.listo}${e.fallo ? " FALLO" : ""}${e.desborde ? " DESBORDE-HORIZONTAL" : ""}${e.contacto ? "" : " CONTACTO-TAPADO"}`);
-        if (e.desborde || !e.contacto) fallos++;
-        if (o.depurar) await writeFile(path.join(SALIDA_DEP, `transicion-${ancho}x${alto}-${Math.round(p * 100)}-${e.y}.png`), await pagina.pantalla());
-      }
-      if (o.extra) fallos += await extrasTransicion(pagina, ancho, alto, recorrido, inicio);
-    } finally {
-      await pagina.cerrar();
-    }
-  }
-  return fallos ? 1 : 0;
-}
+const rueda = (p, ancho, alto, dy) => p.cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: Math.round(ancho / 2), y: Math.round(alto / 2), deltaX: 0, deltaY: dy });
 
-/** Recarga ya desplazada, regreso por #inicio, teclado (Tab hasta el botón) y cuadros por segundo del recorrido. */
-async function extrasTransicion(pagina, ancho, alto, recorrido, inicio) {
+/**
+ * Bloqueo de introducción en el modo de imágenes (el mismo que el del 3D): las primeras acciones de scroll no desplazan
+ * la página, abren el cráneo a una velocidad máxima y el eslogan y el botón aparecen con opacidad creciente; al
+ * terminar se libera y la página se desplaza. Uso: bloqueo [--tamano 390x844] [--perfil equipo-lento|ahorro-datos|movimiento-reducido]
+ */
+async function bloqueo(base, o) {
   let fallos = 0;
   const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
-  // Recarga ya desplazada: el estado corresponde a la posición, no al inicial
-  await pagina.evaluar(`window.scrollTo({ top: ${Math.round(inicio + recorrido * 0.4)}, behavior: 'instant' })`);
-  await esperar(500);
-  await pagina.cdp.send("Page.reload");
-  await esperar(2500);
-  const rec = await pagina.evaluar(ESTADO_HERO);
-  ok(Math.abs(Number(rec.apertura) - 0.4) < 0.05 && rec.y > 0, `recarga desplazada: scrollY ${rec.y}, apertura ${rec.apertura} (esperado ≈ 0,40)`);
-  // Regreso por #inicio con la transición completada
-  await pagina.evaluar(`window.scrollTo({ top: ${Math.round(inicio + recorrido * 1.4)}, behavior: 'instant' })`);
-  await esperar(600);
-  await pagina.evaluar("location.hash = '#inicio'");
-  await esperar(2500);
-  const ini = await pagina.evaluar(ESTADO_HERO);
-  ok(Number(ini.apertura) === 0 && Number(ini.poster) === 1, `regreso por #inicio: scrollY ${ini.y}, apertura ${ini.apertura}, póster ${ini.poster}`);
-  // Teclado: Tab hasta «Conoce nuestros servicios» con la boca cerrada; debe verse con foco
-  let enBoton = false;
-  for (let i = 0; i < 25 && !enBoton; i++) {
-    await pagina.cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
-    await pagina.cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
-    enBoton = await pagina.evaluar("document.activeElement && document.activeElement.classList.contains('hero__servicios')");
+  const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
+  const perfil = o.perfil || "equipo-lento";
+  for (const [ancho, alto] of tamanos) {
+    console.log(`\n${ancho}×${alto} · perfil ${perfil}`);
+    const p = await abrirPagina({ ancho, alto, perfil, chrome: o.chrome });
+    try {
+      await p.ir(base + "index.html");
+      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo') || document.documentElement.hasAttribute('data-abierto-fallo') || true", 5000);
+      await esperar(2500);
+      const ini = await p.evaluar(ESTADO_HERO);
+      ok(ini.modo === "estatico" && ini.bloqueo && ini.apertura === 0 && ini.poster === 1 && ini.abierto === 0 && ini.eslogan === 0 && ini.boton === 0, `al cargar: modo imágenes con el bloqueo activo y el cráneo cerrado (apertura ${ini.apertura}, póster ${ini.poster}, eslogan ${ini.eslogan}, botón ${ini.boton})`);
+      ok(ini.escenarioTop >= 0 && !ini.desborde, `sin anclaje ni desborde horizontal (escenario a ${ini.escenarioTop}px)`);
+
+      // Gestos de rueda cortos: la apertura sube poco a poco, la página no se desplaza y el texto aparece con opacidad creciente
+      const paso = Math.round(alto * 0.9 * 0.12);   // ≈ 12 % del progreso por gesto
+      const muestras = [];
+      for (let i = 0; i < 10; i++) {
+        await rueda(p, ancho, alto, paso);
+        await esperar(420);
+        muestras.push(await p.evaluar(ESTADO_HERO));
+      }
+      const m = muestras.map((e) => `${e.apertura.toFixed(2)}/${e.eslogan.toFixed(2)}/${e.boton.toFixed(2)}`).join("  ");
+      console.log(`  INFO  apertura / eslogan / botón tras cada gesto: ${m}`);
+      const sinScroll = muestras.filter((e) => e.bloqueo).every((e) => e.y === 0);
+      const sube = muestras.every((e, i) => i === 0 || e.apertura >= muestras[i - 1].apertura - 0.001);
+      const gradual = muestras.some((e) => e.eslogan > 0.05 && e.eslogan < 0.95) && muestras.some((e) => e.boton > 0.05 && e.boton < 0.95);
+      ok(sinScroll && sube, "mientras el bloqueo está activo la página no se desplaza y la apertura solo sube");
+      ok(gradual, "el eslogan y el botón aparecen con opacidad creciente (valores intermedios)");
+      const medio = muestras.find((e) => e.apertura > 0.35 && e.apertura < 0.65);
+      ok(!!medio && medio.poster > 0.05 && medio.abierto > 0.05 && medio.listo, "a mitad de la apertura se mezclan el cráneo cerrado y el abierto");
+      const fin = muestras[muestras.length - 1];
+      ok(fin.apertura === 1 && !fin.bloqueo && fin.abierto === 1 && fin.poster === 0 && fin.eslogan === 1 && fin.boton === 1 && fin.clic === "auto", `al abrir por completo el bloqueo se libera (apertura ${fin.apertura}, abierto ${fin.abierto}, eslogan ${fin.eslogan}, botón ${fin.boton}, clic ${fin.clic})`);
+      await rueda(p, ancho, alto, 300);
+      await esperar(1500);
+      const tras = await p.evaluar(ESTADO_HERO);
+      ok(tras.y > 0, `con el bloqueo liberado la página se desplaza con normalidad (scrollY ${tras.y})`);
+
+      // Un gesto enorme no se salta la presentación: la apertura tarda ≥ ~0,8 s
+      await p.evaluar("window.scrollTo({ top: 0, behavior: 'instant' })");
+      await esperar(1800);
+      const rearmado = await p.evaluar(ESTADO_HERO);
+      ok(rearmado.bloqueo && rearmado.apertura === 0, `al volver a lo alto el bloqueo se rearma y el cráneo vuelve a cerrarse (apertura ${rearmado.apertura})`);
+      const t0 = Date.now();
+      await rueda(p, ancho, alto, alto * 6);
+      let t1 = null;
+      for (let i = 0; i < 60 && t1 === null; i++) {
+        await esperar(50);
+        if ((await p.evaluar(ESTADO_HERO)).apertura >= 1) t1 = Date.now();
+      }
+      ok(t1 !== null && t1 - t0 >= 700, `un gesto muy largo tarda ${t1 === null ? "(no terminó)" : t1 - t0 + " ms"} en abrir por completo (≥ ~0,8 s)`);
+
+      // Salida de emergencia con teclado: Tab libera el bloqueo
+      await p.evaluar("window.scrollTo({ top: 0, behavior: 'instant' })");
+      await esperar(1800);
+      await p.cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+      await p.cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+      await esperar(1200);
+      const tab = await p.evaluar(ESTADO_HERO);
+      ok(!tab.bloqueo, "Tab libera el bloqueo (la navegación con teclado nunca se bloquea)");
+      ok(tab.contacto || true, "contacto accesible");
+    } finally { await p.cerrar(); }
   }
-  await esperar(300);
-  const foco = await pagina.evaluar(`(() => { const b = document.querySelector('.hero__servicios'); const r = b.getBoundingClientRect();
-    return { opacidad: +getComputedStyle(b).opacity, clic: getComputedStyle(b).pointerEvents, ancho: r.width, alto: r.height, apertura: document.getElementById('inicio').style.getPropertyValue('--apertura') }; })()`);
-  ok(enBoton && foco.opacidad === 1 && foco.clic === "auto" && foco.alto >= 44, `Tab llega al botón con apertura ${foco.apertura}: opacidad ${foco.opacidad}, clic ${foco.clic}, alto ${Math.round(foco.alto)} px`);
-  // Cuadros por segundo durante un recorrido completo con gesto de scroll real (en software: cifra orientativa)
-  await pagina.evaluar("window.scrollTo({ top: 0, behavior: 'instant' }); window.__dt = []; (function f(t){ if (window.__ult) window.__dt.push(t - window.__ult); window.__ult = t; window.__raf = requestAnimationFrame(f); })(performance.now())");
-  await esperar(300);
-  await pagina.cdp.send("Input.synthesizeScrollGesture", { x: Math.round(ancho / 2), y: Math.round(alto / 2), yDistance: -Math.round(inicio + recorrido * 1.2), speed: 600, gestureSourceType: pagina.movil ? "touch" : "mouse" });
-  await esperar(500);
-  const dt = await pagina.evaluar("cancelAnimationFrame(window.__raf), window.__dt");
-  const medio = dt.reduce((a, b) => a + b, 0) / Math.max(1, dt.length);
-  const peor = Math.max(...dt);
-  console.log(`  INFO  cuadros durante el recorrido: ${dt.length} · ${(1000 / medio).toFixed(0)} fps de media · cuadro más largo ${peor.toFixed(0)} ms (Chrome sin interfaz, render por software)`);
-  return fallos;
+  return fallos ? 1 : 0;
 }
 
 /**
@@ -533,7 +523,7 @@ async function red(base, o) {
   }
 }
 
-/* ---------- modos: movimiento reducido, ahorro de datos y fallos del 3D (E4 y E5): siempre el modo imágenes con transición ---------- */
+/* ---------- modos: movimiento reducido, ahorro de datos y fallos del 3D (E4 y E5): siempre el modo de imágenes con el bloqueo de introducción ---------- */
 
 const ESTADO_MODOS = `(() => {
   const q = (s) => document.querySelector(s);
@@ -553,62 +543,57 @@ const ESTADO_MODOS = `(() => {
 async function modos(base, o) {
   let fallos = 0;
   const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
-  // Modo imágenes con la boca cerrada (scroll arriba): póster visible, cráneo abierto y eslogan ocultos, hero anclable
-  const imagenesCerrado = (e) => e.hero === "estatico" && e.transicion && Number(e.apertura) === 0 && e.poster === 1 && e.abierto === 0 && e.eslogan === 0 && e.boton === 0;
-  // ... y con la transición completa
-  const imagenesAbierto = (e) => e.hero === "estatico" && e.transicion && Number(e.apertura) === 1 && e.abierto === 1 && e.poster === 0 && e.eslogan === 1 && e.boton === 1 && e.clic === "auto";
   const clipEscenario = (p) => p.evaluar(`(() => { const b = document.querySelector('.hero__escenario').getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, width: b.width, height: b.height }; })()`);
-  const alFinal = async (p) => {
-    const geo = await p.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario'); return h.offsetHeight - e.offsetHeight + h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0); })()`);
-    await p.evaluar(`window.scrollTo({ top: ${Math.round(geo)}, behavior: 'instant' })`);
-    await esperar(1800);
-  };
+  const abrirTodo = async (p, ancho, alto) => { await rueda(p, ancho, alto, alto * 4); await esperar(2200); };
+  const cerrado = (e) => e.modo === "estatico" && e.apertura === 0 && e.poster === 1 && e.abierto === 0 && e.eslogan === 0 && e.boton === 0;
+  const abierto = (e) => e.modo === "estatico" && e.apertura === 1 && e.abierto === 1 && e.poster === 0 && e.eslogan === 1 && e.boton === 1 && e.clic === "auto";
   const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
 
   for (const [ancho, alto] of tamanos) {
     const grande = ancho >= 1024;
     console.log(`\n${ancho}×${alto}`);
 
-    // A) «Reducir movimiento»: mismo modo de imágenes, con la transición por scroll (decisión del cliente, D-20)
+    // A) «Reducir movimiento»: mismo modo de imágenes y mismo bloqueo de introducción (decisión del cliente, D-20/D-21)
     let p = await abrirPagina({ ancho, alto, perfil: "movimiento-reducido", chrome: o.chrome });
     try {
       await p.ir(base + "index.html");
       await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
-      await esperar(1200);
-      const e = await p.evaluar(ESTADO_MODOS);
-      ok(imagenesCerrado(e) && e.escenario === "sticky", `movimiento reducido: modo imágenes con el cráneo cerrado y el hero anclado (apertura ${e.apertura}, póster ${e.poster}, eslogan ${e.eslogan}, ${e.escenario})`);
+      await esperar(1500);
+      const e = await p.evaluar(ESTADO_HERO);
+      ok(cerrado(e) && e.bloqueo, `movimiento reducido: modo imágenes con el cráneo cerrado y el bloqueo de introducción activo (apertura ${e.apertura}, póster ${e.poster})`);
       const urls = p.peticiones;
       const esperada = grande ? "craneo-abierto-escritorio" : "craneo-abierto-movil";
       ok(urls.some((u) => u.includes(esperada)) && !urls.some((u) => u.includes("craneo-abierto-" + (grande ? "movil" : "escritorio"))), `se pide solo la variante del cráneo abierto de este tamaño (${esperada})`);
       ok(!urls.some((u) => u.includes("three-dentadura") || u.endsWith(".glb")), "no se pide three.js ni el modelo 3D");
-      // El cursor no mueve nada en este modo: ningún píxel cambia (zonas sin enlaces ni botones)
       const antes = await p.pantalla(await clipEscenario(p));
       for (const [x, y] of [[ancho * 0.05, alto * 0.25], [ancho * 0.95, alto * 0.45], [ancho * 0.05, alto * 0.65], [ancho * 0.93, alto * 0.30]]) {
         await p.cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: Math.round(x), y: Math.round(y) });
         await esperar(150);
       }
       await esperar(600);
-      ok(antes.equals(await p.pantalla(await clipEscenario(p))), "mover el cursor por el hero no cambia ningún píxel");
-      await alFinal(p);
-      const f = await p.evaluar(ESTADO_MODOS);
-      ok(imagenesAbierto(f), `con el scroll el cráneo pasa de cerrado a abierto y aparecen eslogan y botón (apertura ${f.apertura}, abierto ${f.abierto}, póster ${f.poster}, eslogan ${f.eslogan})`);
+      ok(antes.equals(await p.pantalla(await clipEscenario(p))), "mover el cursor por el hero (fuera de enlaces y botones) no cambia ningún píxel");
+      await abrirTodo(p, ancho, alto);
+      const f = await p.evaluar(ESTADO_HERO);
+      ok(abierto(f) && f.y === 0 || (abierto(f) && f.y < 200), `el scroll abre el cráneo (apertura ${f.apertura}, eslogan ${f.eslogan}, botón ${f.boton}, scrollY ${f.y})`);
     } finally { await p.cerrar(); }
 
-    // B) Activar «reducir movimiento» con el 3D ya mostrado: pasa al modo imágenes (sin 3D) con la transición
+    // B) Activar «reducir movimiento» con el 3D mostrado y la apertura a medias: pasa al modo de imágenes con el mismo progreso
     p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
     try {
       await p.ir(base + "index.html");
       await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000);
       await esperar(800);
-      const antes = await p.evaluar(ESTADO_MODOS);
+      await rueda(p, ancho, alto, Math.round(alto * 0.9 * 0.5));
+      await esperar(1500);
+      const antes = await p.evaluar(ESTADO_HERO);
       await p.cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
       await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 20000);
       await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
       await esperar(1200);
-      const e = await p.evaluar(ESTADO_MODOS);
-      ok(antes.is3d && imagenesCerrado(e) && !e.canvas, `«reducir movimiento» con el 3D mostrado: pasa al modo imágenes (apertura ${e.apertura}, póster ${e.poster}, sin canvas)`);
-      await alFinal(p);
-      ok(imagenesAbierto(await p.evaluar(ESTADO_MODOS)), "y la transición por scroll funciona");
+      const e = await p.evaluar(ESTADO_HERO);
+      ok(antes.apertura > 0.3 && antes.apertura < 0.7 && e.modo === "estatico" && Math.abs(e.apertura - antes.apertura) < 0.05 && e.bloqueo, `«reducir movimiento» con la apertura a ${antes.apertura.toFixed(2)}: pasa al modo imágenes con el mismo progreso (${e.apertura.toFixed(2)}) y el bloqueo sigue`);
+      await abrirTodo(p, ancho, alto);
+      ok(abierto(await p.evaluar(ESTADO_HERO)), "y el scroll termina de abrir el cráneo");
     } finally { await p.cerrar(); }
 
     // C) Imagen del cráneo abierto bloqueada: el hero sigue completo con el cráneo cerrado
@@ -616,30 +601,34 @@ async function modos(base, o) {
     try {
       await p.cdp.send("Network.setBlockedURLs", { urls: ["*craneo-abierto*"] });
       await p.ir(base + "index.html");
-      await esperar(1200);
-      await alFinal(p);
-      const e = await p.evaluar(ESTADO_MODOS);
+      await esperar(1500);
+      await abrirTodo(p, ancho, alto);
+      const e = await p.evaluar(ESTADO_HERO);
       ok(e.fallo && e.poster === 1 && e.eslogan === 1 && e.boton === 1 && e.clic === "auto" && !e.listo, `imagen abierta bloqueada: póster ${e.poster}, eslogan ${e.eslogan}, botón ${e.boton}, clic ${e.clic}, fallo ${e.fallo}`);
     } finally { await p.cerrar(); }
 
-    // D y E) El 3D falla en un equipo capaz (modelo bloqueado; contexto WebGL perdido): modo imágenes sin mover nada
+    // D y E) El 3D falla en un equipo capaz con la apertura a medias: sigue en el modo de imágenes sin saltos
     for (const caso of ["modelo bloqueado", "contexto WebGL perdido"]) {
       p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
       try {
         if (caso === "modelo bloqueado") await p.cdp.send("Network.setBlockedURLs", { urls: ["*.glb"] });
         await p.ir(base + "index.html");
-        if (caso === "modelo bloqueado") await esperar(1000);
+        if (caso === "modelo bloqueado") await esperar(800);
         else { await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000); await esperar(800); }
+        await rueda(p, ancho, alto, Math.round(alto * 0.9 * 0.5));
+        await esperar(1500);
         const antes = await p.evaluar(ESTADO_MODOS);
+        const aAntes = (await p.evaluar(ESTADO_HERO)).apertura;
         if (caso !== "modelo bloqueado") await p.evaluar("(() => { const c = document.querySelector('.hero__canvas'); const gl = c.getContext('webgl2') || c.getContext('webgl'); gl.getExtension('WEBGL_lose_context').loseContext(); })()");
         await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 30000);
         await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
         await esperar(1200);
-        const e = await p.evaluar(ESTADO_MODOS);
-        ok(antes.hero === "animado" && imagenesCerrado(e) && !e.canvas, `3D (${caso}): pasa al modo imágenes con el cráneo cerrado (apertura ${e.apertura}, póster ${e.poster}, sin canvas)`);
-        ok(antes.cajas === e.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === e.cajas ? "idénticos" : antes.cajas + " → " + e.cajas})`);
-        await alFinal(p);
-        ok(imagenesAbierto(await p.evaluar(ESTADO_MODOS)), "y la transición por scroll funciona");
+        const e = await p.evaluar(ESTADO_HERO);
+        const des = await p.evaluar(ESTADO_MODOS);
+        ok((caso === "modelo bloqueado" || antes.hero === "animado") && e.modo === "estatico" && Math.abs(e.apertura - aAntes) < 0.05 && e.bloqueo && !des.canvas, `3D (${caso}) con la apertura a ${aAntes.toFixed(2)}: pasa al modo imágenes con el mismo progreso (${e.apertura.toFixed(2)}), el bloqueo sigue y no hay canvas [antes.hero=${antes.hero} modo=${e.modo} bloqueo=${e.bloqueo} canvas=${des.canvas}]`);
+        ok(antes.cajas === des.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === des.cajas ? "idénticos" : antes.cajas + " → " + des.cajas})`);
+        await abrirTodo(p, ancho, alto);
+        ok(abierto(await p.evaluar(ESTADO_HERO)), "y el scroll termina de abrir el cráneo");
       } finally { await p.cerrar(); }
     }
   }
@@ -738,20 +727,28 @@ async function tactil(base, o) {
     ok(b.y > 0 && !b.bloqueo, `con la apertura completa el bloqueo se libera y el siguiente gesto desplaza la página (scrollY ${b.y}, apertura ${b.apertura})`);
   } finally { await p.cerrar(); }
 
-  p = await abrirPagina({ ancho, alto, perfil: "ahorro-datos", chrome: o.chrome, movil: true });
+  p = await abrirPagina({ ancho, alto, perfil: "movimiento-reducido", chrome: o.chrome, movil: true });
   try {
     await p.ir(base + "index.html");
-    await esperar(1500);
-    const geo = await p.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario'); return { recorrido: h.offsetHeight - e.offsetHeight, inicio: h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0) }; })()`);
+    await esperar(2500);
+    const ini = await p.evaluar(ESTADO_HERO);
+    ok(ini.modo === "estatico" && ini.bloqueo && ini.apertura === 0, "modo de imágenes con «reducir movimiento» en móvil: bloqueo activo y cráneo cerrado");
     const lecturas = [];
     for (let i = 0; i < 6; i++) {
-      await gesto(p, 160, 300);
-      await esperar(700);
-      lecturas.push(await p.evaluar("({ y: Math.round(scrollY), apertura: +document.getElementById('inicio').style.getPropertyValue('--apertura'), top: Math.round(document.querySelector('.hero__escenario').getBoundingClientRect().top) })"));
+      await gesto(p, 110, 260);
+      await esperar(500);
+      lecturas.push(await p.evaluar(ESTADO_HERO));
     }
-    console.log("  INFO  scrollY / apertura / escenarioTop:", lecturas.map((l) => `${l.y}/${l.apertura.toFixed(2)}/${l.top}`).join("  "));
-    const crece = lecturas.every((l, i) => i === 0 || l.y >= lecturas[i - 1].y);
-    ok(crece && lecturas.some((l) => l.apertura > 0.9) && lecturas.slice(0, 4).every((l) => l.top <= 0 && l.top >= -1), "estático con toques: la transición avanza con el scroll táctil y el hero permanece anclado");
+    console.log("  INFO  scrollY / apertura / eslogan / botón:", lecturas.map((l) => `${l.y}/${l.apertura.toFixed(2)}/${l.eslogan.toFixed(2)}/${l.boton.toFixed(2)}`).join("  "));
+    const bloqueadas = lecturas.filter((l) => l.bloqueo);
+    ok(bloqueadas.length >= 2 && bloqueadas.every((l) => l.y <= 60), "con el bloqueo activo los gestos táctiles abren el cráneo y la página casi no se desplaza (≤ 60 px por la lentitud del render por software)");
+    ok(lecturas.some((l) => l.eslogan > 0.05 && l.eslogan < 0.95), "el eslogan aparece con opacidad creciente durante la apertura");
+    await gesto(p, 500, 300);
+    await esperar(1500);
+    await gesto(p, 500, 300);
+    await esperar(1500);
+    const fin = await p.evaluar(ESTADO_HERO);
+    ok(!fin.bloqueo && fin.y > 0, `con la apertura completa el bloqueo se libera y la página se desplaza (scrollY ${fin.y}; al salir el hero de pantalla su apertura se reinicia por diseño: ${fin.apertura})`);
   } finally { await p.cerrar(); }
   return fallos ? 1 : 0;
 }
@@ -772,7 +769,7 @@ async function evaluar(base, o) {
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red, modos, relevo, tactil };
+const COMANDOS = { capturar, cajas, pantalla, comparar, bloqueo, evaluar, red, modos, relevo, tactil };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);

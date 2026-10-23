@@ -6,12 +6,12 @@ Fase 0 de `/speckit-plan`. Cada punto sigue el formato *Decisión · Motivo · A
 
 **Hallazgo (código actual)**: `index.html` decide en el `<head>` `data-hero="estatico|animado"` (movimiento reducido, ahorro de datos, memoria ≤ 2 GB o ≤ 2 núcleos → `estatico`). `js/principal.js` activa el *bloqueo de introducción* solo con `animado` y el módulo 3D puede degradar a `estatico` en caliente (sin WebGL, modelo fallido, contexto perdido, FPS bajos en ligero). Hoy el CSS mantiene dos disposiciones distintas (`html[data-hero="animado"]` reorganiza la rejilla; el modo base pone eslogan y botón **debajo** de la figura).
 
-**Decisión**: una sola disposición para los dos modos (la del 3D) y dos «fuentes» del progreso `--apertura` (revisada el 2026-10-23, D-20: «reducir movimiento» ya no quita la transición):
+**Decisión** (revisada el 2026-10-23, D-20 y D-21): una sola disposición para los dos modos (la del 3D) y **una sola fuente del progreso `--apertura`: el bloqueo de introducción** del 3D, que ahora se aplica también al hero de imágenes (también con «reducir movimiento»):
 
 | Modo | Cuándo | Fuente de `--apertura` | Hero |
 |---|---|---|---|
-| 3D (`animado`) | equipo capaz | bloqueo de introducción (ya existe) | no anclado; el cráneo estático sigue el progreso mientras el 3D carga |
-| Imágenes con transición (`estatico`) | `estatico` decidido en el `<head>` (ahorro de datos, equipo lento, «reducir movimiento»), o 3D que falla o se descarta | scroll nativo | **anclado** (`sticky`) durante el recorrido |
+| 3D (`animado`) | equipo capaz | bloqueo de introducción | no anclado; el cráneo estático sigue el progreso mientras el 3D carga |
+| Imágenes (`estatico`) | `estatico` decidido en el `<head>` (ahorro de datos, equipo lento, «reducir movimiento»), o 3D que falla o se descarta | bloqueo de introducción | no anclado; fundido del cráneo cerrado al abierto |
 | Composición final (excepción) | móvil apaisado bajo o sin JS | constante `1` | no anclado; sin animación |
 
 **Motivo**: reutiliza el CSS de revelado que ya depende de `--apertura` y garantiza que las posiciones coincidan con el 3D (FR-002) por construcción: es el mismo DOM y las mismas reglas de rejilla.
@@ -20,20 +20,15 @@ Fase 0 de `/speckit-plan`. Cada punto sigue el formato *Decisión · Motivo · A
 
 **Alternativas**: (a) detectar WebGL en el `<head>` con un `canvas` de prueba → descartado: crea un contexto GPU en la ruta crítica y arriesga el LCP en gama baja; (b) mantener dos disposiciones → descartado: nunca coincidirían con precisión.
 
-## R2 — Mecanismo del scroll
+## R2 — Mecanismo del scroll (revisado: bloqueo de introducción en los dos modos)
 
-**Decisión**: **`position: sticky` + progreso calculado en JS con suavizado**, y el CSS consume `--apertura` (0–1):
+**Primera decisión (2026-10-20, descartada)**: `position: sticky` + progreso calculado con la posición de scroll nativo (recorrido de ≈ 80 svh con un espaciador `.hero::after`). Se implementó y verificó, pero en la prueba en móvil real (2026-10-23) la transición pasaba «de golpe» y obligaba a desplazar mucho la página (el recorrido iba ligado a los píxeles de scroll, con la inercia del teléfono).
 
-- `html[data-transicion]` (lo escribe el `<head>`) añade al `.hero` un recorrido de scroll `D` (por defecto `80svh`) y fija `.hero__escenario` con `position: sticky` (`top: 0` en móvil; `top: var(--alto-header)` en ≥ 1024 px, donde el encabezado ya es `sticky`).
-- `D` no se duplica en JS: `apertura = clamp(scrollY / (hero.offsetHeight − escenario.offsetHeight), 0, 1)`. Como el hero empieza justo debajo del encabezado, `scrollY = 0` ↔ `apertura = 0` también al cargar con ancla o recargar desplazado.
-- Un solo `scroll` pasivo que agenda un `requestAnimationFrame`; el valor mostrado se acerca al objetivo con el mismo suavizado exponencial que usa el 3D (`k = 1 − e^(−12·dt)`), de modo que `End`, anclas o inercia no producen saltos.
-- Se detiene (sin rAF) cuando el valor mostrado alcanza el objetivo y cuando el hero sale de pantalla (`IntersectionObserver`).
+**Decisión vigente (D-21)**: reutilizar el **bloqueo de introducción** del hero 3D (D-18, constitución principio II) en el hero de imágenes: las primeras acciones de scroll no desplazan la página, avanzan la apertura con velocidad máxima (≥ ≈ 0,8 s el recorrido completo), el eslogan y el botón aparecen con opacidad creciente y, al completarse, el bloqueo se libera. Es el mismo comportamiento que ya se probó en móvil real para el 3D; el cliente lo pidió explícitamente («como en PC»).
 
-**Motivo**: funciona en todos los navegadores objetivo; no toca el scroll nativo (principio II: el *bloqueo de introducción* no puede usarse en modo estático); el recorrido y el progreso salen de la misma geometría, así que no hay constantes que desincronizar.
+**Consecuencias**: se eliminan el anclaje `sticky`, el espaciador, `--recorrido`, `data-transicion` y `controlarTransicionScroll`; el progreso tiene una sola fuente; si el 3D falla, el bloqueo sigue con el mismo progreso (sin saltos). La constitución v2.6.0 amplía la excepción del principio II a los dos modos y quita la condición «no con movimiento reducido, ahorro de datos, equipo lento ni sin 3D».
 
-**Alternativas**: (a) *scroll-driven animations* de CSS (`animation-timeline`) → soporte desigual hoy y habría que mantener un plan B en JS de todos modos; se deja como mejora futura; (b) reutilizar el bloqueo de introducción → prohibido por la constitución en modo estático; (c) el hero se desplaza normalmente y la imagen cambia durante la salida → el eslogan y el botón se irían antes de leerse.
-
-**Notas de maquetación**: en móvil el encabezado no es fijo (76 px); el escenario se ancla en `top: 0` con **altura constante** (no se redimensiona al anclarse, para no reescalar el cráneo). La franja que queda entre el escenario y la barra fija se rellena con el color de fondo del hero (token `--color-velo-fondo`) y los bordes superior e inferior de las imágenes de fondo deben terminar en ese mismo color (ver R7). Los ancestros del escenario no pueden tener `overflow` distinto de `visible` (comprobar `main` y `body`).
+**Alternativas**: mantener el scroll nativo anclado y alargar el recorrido → descartado: sigue ligado a los píxeles y a la inercia; *scroll-driven animations* de CSS → soporte desigual.
 
 ## R3 — Cómo se compone la transición visual
 

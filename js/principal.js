@@ -145,17 +145,20 @@
   }
 
   /**
-   * Bloqueo de introducción del hero (constitución v2.3.0, principio II).
+   * Bloqueo de introducción del hero (constitución v2.6.0, principio II). Es el mismo en los dos modos del hero
+   * (3D e imágenes): el progreso gobierna la mandíbula del 3D o el fundido del cráneo cerrado al abierto.
    *
    * Al cargar la página en lo alto, las primeras acciones de scroll (rueda, arrastre táctil o
    * teclas) NO desplazan la página: avanzan la apertura de la mandíbula (progreso 0–1), con una
-   * velocidad máxima, de modo que un gesto largo no se salte la animación. Al llegar a 1 el
-   * bloqueo se libera y la página se desplaza con normalidad.
+   * velocidad máxima, de modo que un gesto largo no se salte la animación, y el eslogan y el botón
+   * aparecen poco a poco (opacidad creciente). Al llegar a 1 el bloqueo se libera y la página se
+   * desplaza con normalidad.
    *
    * Salidas de emergencia (nunca debe atrapar a nadie): Tab, clic en un ancla interna, cualquier
-   * desplazamiento externo (barra de scroll, buscar en la página, ancla en la URL), pasar a modo
-   * estático (reducir movimiento, 3D fallido) o cargar la página ya desplazada. Los accesos de
-   * contacto (barra fija, botón flotante, teléfono) no dependen del scroll y siguen pulsables.
+   * desplazamiento externo (barra de scroll, buscar en la página, ancla en la URL), móvil apaisado
+   * bajo o cargar la página ya desplazada. Si el 3D falla o se pasa al modo de imágenes, el bloqueo
+   * sigue como estaba (mismo progreso). Los accesos de contacto (barra fija, botón flotante,
+   * teléfono) no dependen del scroll y siguen pulsables.
    *
    * Al volver al inicio del todo tras haber bajado, el hero se rearma: la mandíbula se cierra y
    * el bloqueo vuelve a abrirla (cerrada ya si el hero salió de pantalla del todo).
@@ -330,7 +333,6 @@
       window.addEventListener("keydown", alTeclear);
       window.addEventListener("scroll", alDesplazar, { passive: true });
       document.addEventListener("click", alHacerClic, true);
-      document.addEventListener("dentadura:estado", alEstado);
       if (progreso !== objetivo) {
         ultimo = performance.now();
         cuadro = window.requestAnimationFrame(avanzar);
@@ -339,7 +341,7 @@
       }
     }
 
-    // definitivo = true: no volver a rearmar el bloqueo (modo estático)
+    // definitivo = true: no volver a rearmar el bloqueo
     function liberar(definitivo) {
       if (bloqueado) {
         bloqueado = false;
@@ -352,18 +354,13 @@
         window.removeEventListener("keydown", alTeclear);
         window.removeEventListener("scroll", alDesplazar);
         document.removeEventListener("click", alHacerClic, true);
-        document.removeEventListener("dentadura:estado", alEstado);
         raiz.removeAttribute("data-bloqueo");
-        // Si se libera antes de terminar, el módulo 3D completa la apertura a su ritmo
+        // Si se libera antes de terminar, el módulo 3D (o el fundido de imágenes) completa la apertura a su ritmo
         objetivo = progreso = 1;
         publicar();
       }
       if (definitivo === true) dejarDeVigilar();
       else vigilar();
-    }
-
-    function alEstado(e) {
-      if (e.detail && e.detail.estado === "estatico") liberar(true);
     }
 
     /*
@@ -426,7 +423,6 @@
       figura.addEventListener("pointermove", alMoverSobreFigura, { passive: true });
       figura.addEventListener("pointerleave", alSalirDeFigura, { passive: true });
       figura.addEventListener("keydown", alTeclearFigura);
-      document.addEventListener("dentadura:estado", alEstadoClic);
     }
     function desactivarClic() {
       if (!figura || !clicActivo) return;
@@ -437,15 +433,9 @@
       figura.removeEventListener("pointerleave", alSalirDeFigura);
       figura.classList.remove("is-sobre-modelo");
       figura.removeEventListener("keydown", alTeclearFigura);
-      document.removeEventListener("dentadura:estado", alEstadoClic);
-    }
-    function alEstadoClic(e) {
-      if (e.detail && e.detail.estado === "estatico") liberarParaSiempre();
     }
 
     function liberarParaSiempre() { liberar(true); desactivarClic(); }
-
-    if (raiz.dataset.hero !== "animado") return liberarParaSiempre;
 
     activarClic();
 
@@ -462,108 +452,11 @@
   }
 
   /**
-   * Hero estático con transición por scroll (specs/002-hero-estatico-scroll, contrato §5).
-   *
-   * Solo con html[data-transicion] (ahorro de datos o equipo lento, sin movimiento reducido): el hero queda
-   * anclado (CSS, position: sticky) durante un recorrido de scroll y esta función convierte la posición de scroll
-   * en --apertura (0–1), igual que el bloqueo de introducción lo hace en el modo 3D, de modo que el CSS funde el
-   * cráneo cerrado con el abierto y revela el eslogan y el botón. No intercepta ni bloquea el scroll nativo.
-   *
-   * apertura = acotar((scrollY − inicio) / D), con D = alto del hero − alto del escenario (la distancia que dura el
-   * anclaje) e inicio = el scroll en el que el escenario empieza a anclarse (0 en escritorio, donde el encabezado ya
-   * es fijo; el alto del encabezado en móvil, donde se va con el scroll).
-   * El valor mostrado se acerca al objetivo con el mismo suavizado exponencial del 3D, así que Fin, anclas o la
-   * inercia no producen saltos. Devuelve la función que la desactiva.
-   */
-  function controlarTransicionScroll(hero) {
-    var escenario = hero.querySelector(".hero__escenario");
-    if (!escenario || !document.documentElement.hasAttribute("data-transicion")) return function () {};
-
-    var distancia = 1;
-    var inicio = 0;
-    var objetivo = 0;
-    var mostrado = 0;
-    var publicado = -1;
-    var ultimo = 0;
-    var cuadro = 0;
-    var enPantalla = true;
-    var activo = true;
-
-    function acotar(x) { return Math.min(1, Math.max(0, x)); }
-
-    function publicar() {
-      if (Math.abs(mostrado - publicado) >= 0.0005) {
-        publicado = mostrado;
-        hero.style.setProperty("--apertura", mostrado.toFixed(3));
-      }
-      // Histéresis para que el botón no parpadee en el umbral
-      if (mostrado > UMBRAL_REVELADO_ON) hero.setAttribute("data-revelado", "");
-      else if (mostrado < UMBRAL_REVELADO_OFF) hero.removeAttribute("data-revelado");
-    }
-
-    function avanzar(t) {
-      cuadro = 0;
-      if (!activo) return;
-      var dt = Math.min((t - ultimo) / 1000, 0.1);
-      ultimo = t;
-      mostrado += (objetivo - mostrado) * (1 - Math.exp(-12 * dt));
-      if (Math.abs(objetivo - mostrado) < 0.0005) mostrado = objetivo;
-      publicar();
-      if (mostrado !== objetivo && enPantalla) cuadro = window.requestAnimationFrame(avanzar);
-    }
-
-    function agendar() {
-      if (cuadro || !enPantalla || !activo) return;
-      ultimo = performance.now();
-      cuadro = window.requestAnimationFrame(avanzar);
-    }
-
-    function medir() {
-      var arriba = parseFloat(window.getComputedStyle(escenario).top) || 0;   // donde se ancla el escenario
-      distancia = Math.max(1, hero.offsetHeight - escenario.offsetHeight);
-      inicio = hero.getBoundingClientRect().top + window.pageYOffset - arriba;
-      objetivo = acotar((window.pageYOffset - inicio) / distancia);
-    }
-
-    function alDesplazar() {
-      objetivo = acotar((window.pageYOffset - inicio) / distancia);
-      agendar();
-    }
-
-    function alCambiarTamano() {
-      medir();
-      agendar();
-    }
-
-    // Al cargar (recarga ya desplazada, ancla en la URL) se muestra directamente el estado que corresponde
-    medir();
-    mostrado = objetivo;
-    publicar();
-
-    window.addEventListener("scroll", alDesplazar, { passive: true });
-    var observadorTamano = window.ResizeObserver ? new window.ResizeObserver(alCambiarTamano) : null;
-    if (observadorTamano) { observadorTamano.observe(hero); observadorTamano.observe(escenario); }
-    var observadorVisible = window.IntersectionObserver ? new window.IntersectionObserver(function (entradas) {
-      enPantalla = entradas[entradas.length - 1].isIntersecting;
-      if (enPantalla) { medir(); agendar(); }
-    }) : null;
-    if (observadorVisible) observadorVisible.observe(hero);
-
-    return function detener() {
-      activo = false;
-      if (cuadro) { window.cancelAnimationFrame(cuadro); cuadro = 0; }
-      window.removeEventListener("scroll", alDesplazar);
-      if (observadorTamano) observadorTamano.disconnect();
-      if (observadorVisible) observadorVisible.disconnect();
-    };
-  }
-
-  /**
    * Cráneo abierto del hero estático (contrato §1 y §5): el <img> de .hero__abierto arranca con un GIF vacío y sus
    * <source> llevan un media que solo casa con movimiento reducido. Aquí se cambia ese media por el de data-media
-   * y el navegador elige y pide la imagen real. Cuándo (motivo): "transicion" → tras load y con el navegador libre
-   * (con ahorro de datos, en el primer scroll); "3d" → solo si la persona empieza a abrir la mandíbula antes de que
-   * el 3D esté listo (así el eslogan no aparece sobre un cráneo todavía cerrado); "inmediato" → ya. Si la imagen real falla, data-abierto-fallo deja
+   * y el navegador elige y pide la imagen real. Cuándo (motivo): "carga" → tras load y con el navegador libre
+   * (con ahorro de datos equivale a "apertura"); "apertura" → solo si la persona empieza a abrir el cráneo (y el 3D
+   * no está listo: así el eslogan no aparece sobre un cráneo todavía cerrado); "inmediato" → ya. Si la imagen real falla, data-abierto-fallo deja
    * el póster cerrado con el eslogan y el botón siempre visibles. El onload del <img> marca data-abierto-listo.
    */
   var imagenAbiertaActivada = false;
@@ -586,6 +479,7 @@
       });
     }
     function activar() { activarImagenAbierta(hero); }
+    if (motivo === "carga" && navigator.connection && navigator.connection.saveData) motivo = "apertura";
     function cuandoLibre() {
       function libre() {
         if (window.requestIdleCallback) window.requestIdleCallback(activar, { timeout: 4000 });
@@ -596,56 +490,16 @@
     }
     if (motivo === "inmediato") {
       activar();
-    } else if (motivo === "3d") {
+    } else if (motivo === "apertura") {
       var alApertura = function (e) {
         if (!e.detail || !(e.detail.progreso > 0)) return;
         document.removeEventListener("dentadura:apertura", alApertura);
         if (!document.querySelector(".hero__figura.is-3d")) activar();   // con el 3D ya listo no hace falta
       };
       document.addEventListener("dentadura:apertura", alApertura);
-    } else if (navigator.connection && navigator.connection.saveData) {
-      window.addEventListener("scroll", activar, { once: true, passive: true });
     } else {
       cuandoLibre();
     }
-  }
-
-  /**
-   * Modo imágenes (sin 3D): el scroll nativo gobierna la apertura —cráneo cerrado → abierto con el hero anclado— y
-   * el eslogan y el botón aparecen en la boca. Es el mismo modo para ahorro de datos, equipo lento, «reducir
-   * movimiento» (la transición solo avanza cuando la persona hace scroll; no hay movimiento propio), sin WebGL o con
-   * el 3D fallido. Solo hay dos modos: 3D e imágenes. Única excepción: móvil apaisado bajo (el hero no cabe en
-   * pantalla): composición final sin anclaje; se detiene el control por scroll, se quita data-transicion y
-   * --apertura queda en 1.
-   * motivo: "transicion" (carga normal: la imagen abierta se pide con el navegador libre o en el primer scroll con
-   * ahorro de datos) o "inmediato" (el 3D acaba de fallar o se descartó: se pide ya).
-   */
-  var modoImagenesActivo = false;
-
-  function activarModoImagenes(motivo) {
-    var raiz = document.documentElement;
-    var hero = document.getElementById("inicio");
-    if (!hero || modoImagenesActivo) return;
-    modoImagenesActivo = true;
-    raiz.dataset.hero = "estatico";
-    var detener = null;
-
-    function aComposicionFinal() {
-      if (detener) { detener(); detener = null; }
-      raiz.removeAttribute("data-transicion");
-      hero.style.setProperty("--apertura", "1");
-      hero.setAttribute("data-revelado", "");
-      habilitarImagenAbierta(hero, "inmediato");
-    }
-
-    if (window.matchMedia) {
-      var apaisado = window.matchMedia(CONSULTA_APAISADO_BAJO);
-      if (apaisado.addEventListener) apaisado.addEventListener("change", function (e) { if (e.matches) aComposicionFinal(); });
-      if (apaisado.matches) { aComposicionFinal(); return; }
-    }
-    raiz.setAttribute("data-transicion", "");
-    detener = controlarTransicionScroll(hero);
-    habilitarImagenAbierta(hero, motivo);
   }
 
   function iniciarDentadura() {
@@ -654,42 +508,45 @@
     // y expone window.__craneo para generar las imágenes del hero estático (referencias/herramientas/hero.mjs)
     var captura = /[?&]captura(?:[&=]|$)/.test(window.location.search);
     if (captura) raiz.dataset.hero = "animado";
-    if (raiz.dataset.hero !== "animado" || (!captura && esEquipoModesto())) {
-      activarModoImagenes("transicion");
-      return;
-    }
-
     var hero = document.getElementById("inicio");
     var figura = hero && hero.querySelector(".hero__figura");
-    if (!figura) {
-      activarModoImagenes("transicion");
+
+    // Modo de imágenes (sin 3D): ahorro de datos, equipo lento, «reducir movimiento»…; mismo bloqueo de introducción
+    // que el 3D (el progreso funde el cráneo cerrado con el abierto), mismo clic sobre el cráneo
+    if (raiz.dataset.hero !== "animado" || (!captura && esEquipoModesto()) || !figura) {
+      raiz.dataset.hero = "estatico";
+      if (hero && figura) {
+        publicarApertura(hero);
+        habilitarImagenAbierta(hero, "carga");
+      }
       return;
     }
 
-    var liberarBloqueo = captura ? function () {} : publicarApertura(hero);
+    if (!captura) publicarApertura(hero);
 
-    // Si el 3D falla (sin WebGL, modelo, contexto perdido, FPS bajos) el hero pasa al modo imágenes: el scroll
-    // gobierna la apertura desde la posición actual y se pide ya el cráneo abierto (mientras llega se ve el
-    // póster cerrado). El bloqueo de introducción se libera antes (su propio oyente de este mismo evento).
+    // Si el 3D falla (sin WebGL, modelo, contexto perdido, FPS bajos) el hero pasa al modo de imágenes con el mismo
+    // progreso (el bloqueo de introducción sigue como estaba) y se pide ya el cráneo abierto; mientras llega se ve
+    // el póster cerrado.
     document.addEventListener("dentadura:estado", function (e) {
-      if (e.detail && e.detail.estado === "estatico") activarModoImagenes("inmediato");
+      if (e.detail && e.detail.estado === "estatico") habilitarImagenAbierta(hero, "inmediato");
     });
-    if (!captura) habilitarImagenAbierta(hero, "3d");
+    if (!captura) habilitarImagenAbierta(hero, "apertura");
 
     var nivel = elegirNivel();
     var rutaModelo = nivel === "ligero" ? RUTA_MODELO_LIGERO : RUTA_MODELO_COMPLETO;
 
     var instancia = null;
 
-    // Si la persona activa «reducir movimiento» con la página abierta, se pasa al modo imágenes (sin 3D)
+    // Si la persona activa «reducir movimiento» con la página abierta, se pasa al modo de imágenes (sin 3D) con
+    // el mismo progreso
     if (window.matchMedia) {
       var reducir = window.matchMedia("(prefers-reduced-motion: reduce)");
       var alCambiar = function (e) {
         if (!e.matches) return;
         if (instancia) instancia.destruir();
         detectorModelo = null;
-        liberarBloqueo();
-        activarModoImagenes("inmediato");
+        raiz.dataset.hero = "estatico";
+        habilitarImagenAbierta(hero, "inmediato");
       };
       if (reducir.addEventListener) reducir.addEventListener("change", alCambiar);
     }
@@ -712,8 +569,8 @@
           if (captura) window.__craneo = resultado;
         })
         .catch(function () {
-          liberarBloqueo();
-          activarModoImagenes("inmediato");
+          raiz.dataset.hero = "estatico";
+          habilitarImagenAbierta(hero, "inmediato");
         });
     }
 

@@ -7,7 +7,7 @@ No hay datos persistentes. El «modelo» es el estado en memoria del hero y el i
 | Campo | Tipo | Regla |
 |---|---|---|
 | `apertura` | número 0–1 | Única fuente de verdad para el revelado, el fundido de poses y (en 3D) el ángulo de la mandíbula. Se publica como propiedad CSS `--apertura` en `.hero`. |
-| `fuente` | `bloqueo` · `scroll` · `fija` | Quién escribe `apertura` (ver §2). Solo hay una fuente activa. |
+| `fuente` | `bloqueo` · `fija` | Quién escribe `apertura` (ver §2): el bloqueo de introducción en los dos modos; `fija` (1) solo en móvil apaisado bajo y sin JS. |
 | `t` | número 0–1 | `smoothstep(clamp(apertura / 0,7))`. Fundido de poses, traslación compensatoria y (3D) ángulo de mandíbula. Se calcula en CSS. |
 | `revEslogan` | 0–1 | `clamp((apertura − 0,3) / 0,3)` (regla existente). |
 | `revBoton` | 0–1 | `clamp((apertura − 0,4) / 0,3)` (regla existente). |
@@ -17,39 +17,40 @@ No hay datos persistentes. El «modelo» es el estado en memoria del hero y el i
 
 **Validación**: `apertura` siempre acotada a [0, 1]; con `fuente = fija` vale `1` y no cambia.
 
-## 2. Modo del hero → fuente del progreso y disposición
+## 2. Modo del hero y fuente del progreso
 
-Entradas: `data-hero` (`animado` | `estatico`, del `<head>`), `data-transicion` (presente en todo el modo `estatico`, **también con movimiento reducido**), móvil apaisado bajo. Solo hay dos modos: 3D (`animado`) e imágenes (`estatico` + `data-transicion`).
+Entradas: `data-hero` (`animado` | `estatico`, del `<head>`), móvil apaisado bajo. Solo hay dos modos: 3D (`animado`) e imágenes (`estatico`, también con «reducir movimiento»). **El progreso lo escribe siempre el bloqueo de introducción** (D-21).
 
-| Modo | Condición | `fuente` | Anclado | Imagen abierta |
-|---|---|---|---|---|
-| **3D** | `data-hero="animado"` | `bloqueo` | no | solo mientras el 3D carga y `apertura > 0` |
-| **Imágenes con transición** (`estatico`) | `data-hero="estatico"` + `data-transicion`: ahorro de datos, equipo lento, «reducir movimiento», 3D fallido o descartado | `scroll` | sí (`sticky`, recorrido `D`) | tras `load` (primer scroll con ahorro de datos; ya si el 3D falla) |
-| **Composición final** (excepción) | móvil apaisado bajo (el hero no cabe en pantalla) o sin JS | `fija` (1) | no | inmediata |
+| Modo | Condición | Fuente de `--apertura` | Efecto del progreso |
+|---|---|---|---|
+| **3D** | `data-hero="animado"` | bloqueo de introducción | mandíbula del 3D (y, mientras el 3D carga, fundido de las imágenes) |
+| **Imágenes** | `data-hero="estatico"`: ahorro de datos, equipo lento, «reducir movimiento», 3D fallido o descartado | bloqueo de introducción | fundido del cráneo cerrado al abierto |
+| **Composición final** (excepción) | móvil apaisado bajo o sin JS | `fija` (1) | sin bloqueo; página normal |
 
 ### Transiciones de estado
 
 ```
-carga ──► 3D ──(fallo / contexto perdido / reducir movimiento en vivo)──► Imágenes con transición
+carga ──► 3D ──(fallo / contexto perdido / reducir movimiento en vivo)──► Imágenes (mismo progreso, mismo bloqueo)
   │
-  └──► Imágenes con transición ◄──(se decide en el <head> para ahorro de datos, equipo lento y «reducir movimiento»)
+  └──► Imágenes (se decide en el <head>)
 ```
 
-- **3D → Imágenes con transición**: el bloqueo de introducción se libera, se añade `data-transicion`, el control por scroll toma el relevo (`apertura` pasa a salir de la posición de scroll: 0 en lo alto) y se pide ya el cráneo abierto; el póster cerrado permanece visible hasta que llegue y el canvas desaparece. El escenario no se mueve (el espaciador del recorrido queda bajo el hero).
-- **Reducir movimiento activado en vivo** con el 3D mostrado: igual que un fallo del 3D. Con el modo de imágenes ya activo no cambia nada.
-- **Imágenes con transición → Composición final**: solo al pasar a móvil apaisado bajo; se quita `data-transicion` y `apertura = 1`.
+- **3D → Imágenes**: desaparece el canvas, se pide ya el cráneo abierto y el póster cerrado permanece visible hasta que llegue (`data-abierto-listo`); el bloqueo de introducción **no se toca**, así que el progreso (y el texto ya revelado) continúa sin saltos.
+- **Imágenes → Composición final**: solo al pasar a móvil apaisado bajo (el bloqueo se libera y `apertura = 1`).
 
-## 3. Cálculo de `apertura` en modo `scroll`
+## 3. Bloqueo de introducción (fuente del progreso)
+
+Es el mecanismo existente de `js/principal.js` (`publicarApertura`), sin cambios de lógica:
 
 ```
-D        = hero.offsetHeight − escenario.offsetHeight      (px de recorrido anclado; el espaciador .hero::after)
-inicio   = hero.top + scrollY − top_sticky                  (scroll en el que el escenario empieza a anclarse:
-                                                             ≈ 0 en escritorio; el alto del encabezado en móvil)
-objetivo = clamp((scrollY − inicio) / D, 0, 1)
-mostrado ← mostrado + (objetivo − mostrado) · (1 − e^(−12·dt))     (cada cuadro, mientras |dif| > 0,0005)
+al cargar en lo alto:  bloqueado = true, objetivo = 0
+rueda / toque / teclas: objetivo = clamp(objetivo + delta, 0, 1)         (la página no se desplaza)
+cada cuadro:           apertura += clamp(objetivo − apertura, ±BLOQUEO_VELOCIDAD · dt)     (1,25 por segundo)
+apertura = 1:          bloqueo liberado (la página se desplaza); salidas: Tab, ancla, scroll externo, carga desplazada, apaisado bajo
+al volver a lo alto:   apertura = 0 y el bloqueo se rearma
 ```
 
-Con `scrollY ≤ inicio` → cerrado (también al volver a `#inicio`); con `scrollY ≥ inicio + D` → abierto y el hero se desancla. El espaciador es un elemento dentro del hero (no un `padding`) porque `position: sticky` solo se mueve dentro del contenido de su padre.
+`DISTANCIA_RUEDA` (0,9 alturas de ventana de rueda = todo el progreso) y `DISTANCIA_TOQUE` (0,6 de arrastre táctil), más el impulso al soltar un deslizamiento rápido, definen cuánto hay que desplazar; no hay otra constante que ajustar.
 
 ## 4. Imágenes del hero
 

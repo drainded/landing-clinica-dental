@@ -16,12 +16,12 @@ Guía de validación de extremo a extremo. No contiene código de implementació
 2. **Esperado**: para la fase 0 (cerrado) y la fase 1 (abierto), la silueta del cráneo estático difiere de la del 3D ≤ 2 % del ancho de la figura; las cajas de cabecera, eslogan, botón y contacto son idénticas (0 px).
 3. Revisión visual: superponer capturas al 50 % (estático / 3D) en 390 × 844 y 1440 × 900.
 
-### E2 — Transición por scroll (US2, SC-003)
-1. Modo *Save-Data* o equipo lento, sin movimiento reducido, recarga en lo alto.
-2. Desplazar de 0 a 100 % del recorrido con rueda, dedo (emulación táctil), `Espacio`/`Fin` y arrastrando la barra; comprobar 0, 25, 50, 75 y 100 %, y el camino de vuelta.
-3. **Esperado**: el hero permanece anclado; el cráneo pasa de cerrado a abierto de forma continua (sin doble perfil en el punto medio, sin «teletransporte»); eslogan y botón aparecen juntos en la boca; tras ≈ `80svh` de scroll el hero se desancla y sigue «Servicios» sin salto; al volver hacia arriba regresa al cráneo cerrado.
-4. Scroll muy rápido o con inercia (arrastre + soltar): sin saltos ni vibración.
-5. Con la transición a medias, pulsar «Servicios» del menú: llega a su destino sin quedar atrapado.
+### E2 — Apertura con el bloqueo de introducción (US2, SC-003)
+1. Modo *Save-Data*, equipo lento o movimiento reducido (cualquiera de los tres), recarga en lo alto: `hero.mjs bloqueo --perfil <perfil>` y, a mano, en móvil real.
+2. Hacer gestos de rueda o táctiles **cortos** en lo alto de la página.
+3. **Esperado**: la página no se desplaza (`scrollY` = 0, `<html data-bloqueo>`); la apertura sube poco a poco; el eslogan y el botón aparecen con opacidad creciente (valores intermedios a mitad de camino) y se mezclan el cráneo cerrado y el abierto; al completarse desaparece `data-bloqueo` y el siguiente gesto desplaza la página con normalidad; un gesto **muy largo** tarda ≥ ≈ 0,8 s en abrir por completo.
+4. **Salidas**: Tab libera el bloqueo; también un clic en un ancla interna, la barra de scroll o cargar `/#servicios`. Al volver a lo alto el cráneo se cierra y el bloqueo se rearma.
+5. **Contacto**: «Agende su cita», teléfono y barra fija/botón flotante siguen visibles y pulsables durante el bloqueo.
 
 ### E3 — Fondo y contraste (US3, SC-005)
 1. 1920 × 1080 y 390 × 844: revisar el fondo a tamaño real y ampliado al 200 %.

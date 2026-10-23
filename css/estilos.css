@@ -275,24 +275,9 @@ section { padding: var(--espacio-7) 0; }
   --listo: 0;
 }
 html[data-abierto-listo] .hero { --listo: 1; }
-html[data-hero="animado"] .hero,
-html[data-transicion] .hero { --apertura: 0; }
-/* Estático con transición: el hero se mantiene anclado mientras el scroll nativo avanza --apertura
-   (js/principal.js); --recorrido es la distancia de scroll de la transición (admitido 60–100 svh) */
-html[data-transicion] .hero {
-  --recorrido: 80svh;
-  background-color: var(--color-velo-fondo);   /* rellena la franja que deja el escenario anclado */
-}
-/* El escenario anclado solo se mueve dentro del contenido de su padre: el recorrido es un espaciador, no un padding */
-html[data-transicion] .hero::after {
-  content: "";
-  display: block;
-  height: var(--recorrido);
-}
-html[data-transicion] .hero__escenario {
-  position: sticky;
-  top: 0;
-}
+/* Con JS (data-hero en los dos modos: 3D e imágenes) el hero arranca cerrado y el bloqueo de introducción de
+   js/principal.js escribe --apertura; sin JS queda la composición final (--apertura: 1) */
+html[data-hero] .hero { --apertura: 0; }
 .hero__escenario {
   position: relative;
   isolation: isolate;
@@ -464,15 +449,11 @@ html[data-transicion] .hero__escenario {
   transform: translateY(calc((1 - var(--rev-boton)) * 14px));
 }
 .hero__servicios svg { width: 1.1em; height: 1.1em; }
-/* Mientras el progreso lo gobierna el 3D o el scroll, el botón solo recibe clics una vez revelado */
-html[data-hero="animado"] .hero__revelado,
-html[data-transicion] .hero__revelado { pointer-events: none; }
-html[data-hero="animado"] .hero__servicios,
-html[data-transicion] .hero__servicios { pointer-events: none; }
-html[data-hero="animado"] #inicio[data-revelado] .hero__servicios,
-html[data-transicion] #inicio[data-revelado] .hero__servicios,
-html[data-hero="animado"] .hero__servicios:focus-visible,
-html[data-transicion] .hero__servicios:focus-visible,
+/* Mientras el bloqueo de introducción gobierna el progreso, el botón solo recibe clics una vez revelado */
+html[data-hero] .hero__revelado { pointer-events: none; }
+html[data-hero] .hero__servicios { pointer-events: none; }
+html[data-hero] #inicio[data-revelado] .hero__servicios,
+html[data-hero] .hero__servicios:focus-visible,
 .hero__servicios:focus-visible {
   pointer-events: auto;
 }
@@ -533,8 +514,6 @@ html[data-abierto-fallo] .hero__servicios { pointer-events: auto; }
     --despl-x: .86%;
     --despl-y: -14.18%;
   }
-  /* El encabezado es fijo: el escenario se ancla justo debajo */
-  html[data-transicion] .hero__escenario { top: var(--alto-header); }
   /* En escritorio la boca abierta es más baja: subir el grupo para ver los dientes de arriba y de abajo */
   .hero__revelado { padding-top: 5%; padding-bottom: 0; }
   .hero__eslogan { max-width: 40ch; }
@@ -552,19 +531,17 @@ html[data-abierto-fallo] .hero__servicios { pointer-events: auto; }
   .hero__figura { max-width: 17rem; aspect-ratio: 524 / 564; }
 }
 
-/* Solo hay dos modos: 3D e imágenes con la transición por scroll (también con «reducir movimiento»: la transición
-   solo avanza cuando la persona hace scroll). La única excepción es el móvil apaisado bajo, donde el hero no cabe
-   en pantalla: composición final (cráneo abierto, eslogan y botón en la boca) sin anclaje ni recorrido.
-   js/principal.js escribe --apertura: 1 y quita data-transicion; esto evita el salto mientras tanto. */
+/* Solo hay dos modos: 3D e imágenes (también con «reducir movimiento»), con el mismo bloqueo de introducción: el
+   cráneo se abre con las primeras acciones de scroll. La única excepción es el móvil apaisado bajo, donde el hero no
+   cabe en pantalla: composición final (cráneo abierto, eslogan y botón en la boca) y página normal. js/principal.js
+   también escribe --apertura: 1 allí; esto evita el salto mientras tanto. */
 @media (prefers-reduced-motion: reduce) {
   .hero__canvas,
   .hero__figura.is-3d .hero__poster,
   .hero__figura.is-3d .hero__abierto { transition: none; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
-  html[data-transicion] .hero { --apertura: 1; }
-  html[data-transicion] .hero::after { display: none; }
-  html[data-transicion] .hero__escenario { position: relative; top: auto; }
+  html[data-hero] .hero { --apertura: 1; }
 }
 
 /* ---------- 6. Servicios ---------- */

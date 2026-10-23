@@ -65,9 +65,10 @@
 <link rel="preload" as="image" href="assets/img/craneo-cerrado.webp" fetchpriority="high">
 
 <script>
-/* Decide el modo del hero antes del primer pintado: 'animado' (3D) o 'estatico' (imágenes). Solo hay esos dos modos:
-   el de imágenes (también con «reducir movimiento») lleva data-transicion y el scroll funde el cráneo cerrado con el abierto (specs/002) */
-(function(n){var q=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches,s=n.connection&&n.connection.saveData,e=q||s||n.deviceMemory<=2||n.hardwareConcurrency<=2,d=document.documentElement;d.dataset.hero=e?'estatico':'animado';if(e)d.dataset.transicion=''})(navigator);
+/* Decide el modo del hero antes del primer pintado: 'animado' (3D) o 'estatico' (imágenes). Solo hay esos dos modos y
+   los dos usan el bloqueo de introducción (también con «reducir movimiento»): las primeras acciones de scroll abren el
+   cráneo (specs/002) */
+(function(n){var q=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches,s=n.connection&&n.connection.saveData,e=q||s||n.deviceMemory<=2||n.hardwareConcurrency<=2,d=document.documentElement;d.dataset.hero=e?'estatico':'animado'})(navigator);
 </script>
 <link rel="stylesheet" href="css/estilos.css">
 </head>

@@ -6,11 +6,11 @@
 
 ## Summary
 
-Rediseñar la versión estática del hero para que sea idéntica en posiciones a la del 3D: cráneo cerrado acercado sobre un fondo nuevo (imagen de velos azules con versión de PC y de móvil), y, al hacer scroll, una transición suave y reversible hacia el cráneo abierto con el eslogan y el botón «Conoce nuestros servicios» juntos en el hueco de la boca. Solo hay dos modos —el hero 3D y el hero de imágenes— y el de imágenes lleva siempre esa transición, también con «reducir movimiento» (decisión del cliente tras la prueba en móvil real, D-20); la composición final sin animación queda solo para el móvil apaisado bajo y para quien no tiene JS.
+Rediseñar la versión estática del hero para que sea idéntica en posiciones a la del 3D: cráneo cerrado acercado sobre un fondo nuevo (imagen de velos azules con versión de PC y de móvil), y, con las primeras acciones de scroll (el bloqueo de introducción del 3D, que se reutiliza), una transición suave hacia el cráneo abierto con el eslogan y el botón «Conoce nuestros servicios» apareciendo con opacidad creciente, juntos en el hueco de la boca. Solo hay dos modos —el hero 3D y el hero de imágenes— y los dos usan el mismo bloqueo de introducción, también con «reducir movimiento» (decisiones del cliente tras la prueba en móvil real, D-20 y D-21); la composición final sin animación queda solo para el móvil apaisado bajo y para quien no tiene JS.
 
 Enfoque técnico (detalle en [research.md](research.md)):
 
-- **Una sola disposición** para los dos modos (la del 3D) y **una sola variable de progreso** `--apertura` con dos fuentes: el bloqueo de introducción (3D, sin cambios) o el **scroll nativo** (hero de imágenes, anclado con `position: sticky`); una constante `1` (composición final) solo en móvil apaisado bajo y sin JS. El revelado de eslogan y botón ya depende de esa variable. Cuando el 3D falla o se activa «reducir movimiento» con el 3D mostrado, el hero pasa al de imágenes en caliente (el espaciador del recorrido queda bajo el hero y el escenario no se mueve).
+- **Una sola disposición** para los dos modos (la del 3D) y **una sola variable de progreso** `--apertura`, escrita siempre por el bloqueo de introducción de `js/principal.js` (rueda, toques y teclas avanzan la apertura con velocidad máxima; no hay anclaje `sticky` ni recorrido de scroll). El revelado de eslogan y botón y el fundido de imágenes dependen de esa variable. Si el 3D falla o se activa «reducir movimiento», el bloqueo sigue como estaba (mismo progreso) y solo desaparece el canvas.
 - **Transición** = fundido póster cerrado → imagen abierta con las mismas curvas que el 3D (`smoothstep(apertura / 0,7)`) y una **traslación compensatoria** (la cámara del 3D baja hacia la boca) para que no haya doble perfil. Solo `opacity` y `transform`.
 - **Las imágenes del cráneo salen del propio módulo 3D** (opción `captura` de desarrollo en `js/dentadura.js`, capturada con Chrome sin interfaz): mismos shaders, cámara, encuadre y difuminado bajo los textos. Dos variantes del abierto (móvil y escritorio) porque el difuminado depende del formato.
 - **Fondo**: la original (735 × 595 px) se amplía y limpia (camino A) o se recompone en el mismo estilo (camino B), para PC (1920 × 1080) y móvil (828 × 1792), con la banda oscura retirada de las zonas de texto para cumplir 4,5 : 1.
@@ -43,7 +43,7 @@ Enfoque técnico (detalle en [research.md](research.md)):
 | # | Principio | Estado | Evidencia / acción |
 |---|---|---|---|
 | I | Identidad y contenido | ✅ | Ningún color literal nuevo en CSS/JS: el fondo de respaldo y los halos usan tokens (`--color-velo-fondo`, `--color-superficie`); los colores de las imágenes son activos generados con la paleta. Los datos del negocio y el eslogan no cambian. **Se retiran** los degradados de velos del CSS (`--velo-*-suave`); si dejan de usarse se eliminan los tokens. |
-| II | Contacto primero | ✅ | La transición usa **scroll nativo** (anclaje `sticky`, sin interceptar eventos ni `overflow: hidden` en `<html>`/`<body>`); el bloqueo de introducción queda solo para el 3D. `.hero__contacto`, la barra fija y el botón flotante conservan su `z-index`/`position: fixed` (verificación E8). |
+| II | Contacto primero | ⚠️ enmienda | La presentación usa el **bloqueo de introducción** de la constitución (D-18) en los **dos** modos (D-21), sin `overflow: hidden` ni scroll simulado, una sola vez por visita y con todas las salidas de emergencia (Tab, anclas, barra de scroll, carga desplazada, móvil apaisado bajo). La constitución v2.6.0 retira la condición (4), que lo prohibía con movimiento reducido, ahorro de datos, equipo lento y sin 3D. `.hero__contacto`, la barra fija y el botón flotante conservan su `z-index`/`position: fixed` (verificación E8). |
 | III | Presupuesto de peso | ✅ (a medir) | Crítica ≈ 140–230 KB frente a 500 KB; cráneo abierto diferido; cada perfil descarga solo lo suyo (R6, R9). Cráneo cerrado con `width`/`height` y `fetchpriority="high"` siguen siendo el LCP en los modos con movimiento. |
 | IV | Librerías y dependencias | ✅ | Sin dependencias nuevas en el sitio. Las herramientas (`referencias/herramientas/`: Node sin paquetes, Python/Pillow) no se publican (`/referencias/*` → 404). |
 | V | Modelo 3D | ⚠️ enmienda | El 3D no cambia (la opción `captura` no altera el comportamiento por defecto). El texto exige «un póster estático WebP (máximo 60 KB)»: pasan a ser **dos imágenes de cráneo** (cerrado y abierto) más fondos. Se enmienda para aclarar que el límite de 60 KB aplica a **cada** imagen de cráneo (ver Complexity Tracking). |
@@ -76,11 +76,11 @@ specs/002-hero-estatico-scroll/
 ### Source Code (repository root)
 
 ```text
-index.html                         # <picture class="hero__abierto">; preload condicionados por media; script del <head> añade data-transicion
+index.html                         # <picture class="hero__abierto">; preload condicionados por media; script del <head> solo decide data-hero (3D | imágenes)
 css/
-└── estilos.css                    # disposición única del hero; fondo por imagen; fundido y traslación; anclaje sticky; reglas de movimiento reducido
+└── estilos.css                    # disposición única del hero; fondo por imagen; fundido y traslación; --apertura por defecto 0 con data-hero
 js/
-├── principal.js                   # controlarTransicionScroll(), habilitarImagenAbierta(); degradación del 3D → apertura = 1
+├── principal.js                   # bloqueo de introducción en los dos modos; habilitarImagenAbierta(); el 3D que falla sigue en el modo de imágenes
 └── dentadura.js                   # opción `captura` (solo desarrollo; sin cambio de comportamiento por defecto)
 assets/img/
 ├── fondo-hero-pc.webp             # NUEVO · 1920 × 1080, ≤ 80 KB
@@ -107,7 +107,6 @@ SPEC.md                            # D-19
 | Opción `captura` en `js/dentadura.js` | Es la única forma de generar el cráneo abierto con los mismos shaders, cámara y difuminado que el 3D (FR-002) | Capturas manuales o otro motor de render → no reproducibles ni exactos; no cumplirían ≤ 2 % |
 | Dos variantes del cráneo abierto (móvil y escritorio) | El difuminado bajo los textos depende del formato de pantalla (R5) | Una sola variante → el difuminado no coincidiría con los textos en uno de los dos formatos |
 | Python/Pillow como herramienta de desarrollo (`referencias/herramientas/*.py`) | Es lo que ya está instalado y codifica WebP con control de calidad; no forma parte del sitio ni de su publicación | Reescribirlas en Node → requeriría una dependencia nueva (p. ej. `sharp`) |
-| Anclaje `sticky` con recorrido extra (`≈ 80svh`) en modo estático | La transición por scroll necesita que el hero permanezca a la vista | Desplazarse normalmente mientras cambia la imagen → el eslogan saldría antes de poder leerse |
 
 ## Riesgos y puntos abiertos para `/speckit-tasks`
 
