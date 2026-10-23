@@ -141,7 +141,7 @@ async function abrirPagina({ ancho, alto, perfil = "normal", chrome }) {
   }
   if (SCRIPT_PERFIL[perfil]) await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: SCRIPT_PERFIL[perfil] });
   // Desplazamiento acumulado de diseño (CLS) de la carga, disponible en window.__cls
-  await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__cls=0;window.__clsDet=[];try{new PerformanceObserver((l)=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__cls+=e.value;window.__clsDet.push({v:+e.value.toFixed(4),t:Math.round(e.startTime),n:e.sources.map((x)=>[x.node?((x.node.className&&x.node.className.baseVal===undefined?x.node.className:'')||x.node.nodeName):'?',[x.previousRect.x,x.previousRect.y,x.previousRect.width,x.previousRect.height].map(Math.round),[x.currentRect.x,x.currentRect.y,x.currentRect.width,x.currentRect.height].map(Math.round)])})}}).observe({type:'layout-shift',buffered:true})}catch(_){}" });
+  await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__lcp=null;try{new PerformanceObserver((l)=>{const e=l.getEntries().pop();if(e)window.__lcp={url:e.url||'',tag:e.element?e.element.tagName:'',t:Math.round(e.startTime)}}).observe({type:'largest-contentful-paint',buffered:true})}catch(_){}window.__cls=0;window.__clsDet=[];try{new PerformanceObserver((l)=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__cls+=e.value;window.__clsDet.push({v:+e.value.toFixed(4),t:Math.round(e.startTime),n:e.sources.map((x)=>[x.node?((x.node.className&&x.node.className.baseVal===undefined?x.node.className:'')||x.node.nodeName):'?',[x.previousRect.x,x.previousRect.y,x.previousRect.width,x.previousRect.height].map(Math.round),[x.currentRect.x,x.currentRect.y,x.currentRect.width,x.currentRect.height].map(Math.round)])})}}).observe({type:'layout-shift',buffered:true})}catch(_){}" });
 
   const peticiones = [];
   const porId = new Map();
@@ -531,6 +531,125 @@ async function red(base, o) {
   }
 }
 
+/* ---------- modos: escenarios de movimiento reducido, ahorro de datos y fallos (E4 y E5) ---------- */
+
+const ESTADO_MODOS = `(() => {
+  const q = (s) => document.querySelector(s);
+  const cs = (e, p) => getComputedStyle(e)[p];
+  const h = q('#inicio');
+  const r = (s) => { const b = q(s).getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(','); };
+  return { hero: document.documentElement.dataset.hero, transicion: document.documentElement.hasAttribute('data-transicion'),
+    apertura: (getComputedStyle(h).getPropertyValue('--apertura') || '').trim(),
+    poster: +cs(q('.hero__poster'), 'opacity'), abierto: +cs(q('.hero__abierto'), 'opacity'),
+    eslogan: +cs(q('.hero__eslogan'), 'opacity'), boton: +cs(q('.hero__servicios'), 'opacity'),
+    clic: cs(q('.hero__servicios'), 'pointerEvents'), listo: document.documentElement.hasAttribute('data-abierto-listo'),
+    fallo: document.documentElement.hasAttribute('data-abierto-fallo'), escenario: cs(q('.hero__escenario'), 'position'),
+    canvas: !!q('.hero__canvas'), is3d: q('.hero__figura').classList.contains('is-3d'),
+    cajas: [r('.hero__cabecera'), r('.hero__figura'), r('.hero__contacto')].join(' | '), lcp: window.__lcp || null };
+})()`;
+
+async function modos(base, o) {
+  let fallos = 0;
+  const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
+  const finalOk = (e) => Number(e.apertura) === 1 && !e.transicion && e.escenario !== "sticky" && e.eslogan === 1 && e.boton === 1 && e.clic === "auto";
+  const clipEscenario = (p) => p.evaluar(`(() => { const b = document.querySelector('.hero__escenario').getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, width: b.width, height: b.height }; })()`);
+  const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
+
+  for (const [ancho, alto] of tamanos) {
+    const grande = ancho >= 1024;
+    console.log(`\n${ancho}×${alto}`);
+
+    // A) Movimiento reducido: composición final desde el principio y ningún píxel cambia con cursor ni scroll
+    let p = await abrirPagina({ ancho, alto, perfil: "movimiento-reducido", chrome: o.chrome });
+    try {
+      await p.ir(base + "index.html");
+      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
+      await esperar(1200);
+      const e = await p.evaluar(ESTADO_MODOS);
+      ok(finalOk(e) && e.abierto === 1 && e.poster === 0 && e.listo, `movimiento reducido: composición final (apertura ${e.apertura}, abierto ${e.abierto}, póster ${e.poster}, eslogan ${e.eslogan}, botón ${e.boton}, ${e.escenario})`);
+      const urls = p.peticiones;
+      const esperada = grande ? "craneo-abierto-escritorio" : "craneo-abierto-movil";
+      ok(urls.some((u) => u.includes(esperada)) && !urls.some((u) => u.includes("craneo-abierto-" + (grande ? "movil" : "escritorio"))), `se pide solo la variante del cráneo abierto de este tamaño (${esperada})`);
+      ok(!urls.some((u) => u.includes("three-dentadura") || u.endsWith(".glb")), "no se pide three.js ni el modelo 3D");
+      console.log(`  INFO  LCP: ${e.lcp ? `${e.lcp.url ? e.lcp.url.replace(base, "") : e.lcp.tag} a los ${e.lcp.t} ms` : "sin dato"}`);
+      const antes = await p.pantalla(await clipEscenario(p));
+      // Recorrido del cursor por zonas sin enlaces ni botones (el :hover de un enlace no es movimiento del hero)
+      for (const [x, y] of [[ancho * 0.05, alto * 0.25], [ancho * 0.95, alto * 0.45], [ancho * 0.05, alto * 0.65], [ancho * 0.93, alto * 0.30]]) {
+        await p.cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: Math.round(x), y: Math.round(y) });
+        await esperar(150);
+      }
+      await esperar(600);
+      const tras = await p.pantalla(await clipEscenario(p));
+      ok(antes.equals(tras), "mover el cursor por el hero no cambia ningún píxel");
+      await p.evaluar("window.scrollTo({ top: 300, behavior: 'instant' })");
+      await esperar(500);
+      await p.evaluar("window.scrollTo({ top: 0, behavior: 'instant' })");
+      await esperar(600);
+      const vuelta = await p.pantalla(await clipEscenario(p));
+      ok(antes.equals(vuelta), "hacer scroll y volver no cambia ningún píxel del hero");
+    } finally { await p.cerrar(); }
+
+    // B) Reducir movimiento con la página abierta y la transición a medias
+    p = await abrirPagina({ ancho, alto, perfil: "ahorro-datos", chrome: o.chrome });
+    try {
+      await p.ir(base + "index.html");
+      await esperar(1200);
+      await p.evaluar("window.scrollTo({ top: 250, behavior: 'instant' })");
+      await esperar(900);
+      const antes = await p.evaluar(ESTADO_MODOS);
+      await p.cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+      await esperar(1500);
+      const e = await p.evaluar(ESTADO_MODOS);
+      ok(antes.transicion && finalOk(e) && e.abierto === 1, `activar «reducir movimiento» con la transición a medias (apertura ${antes.apertura}) → composición final (apertura ${e.apertura}, ${e.escenario})`);
+    } finally { await p.cerrar(); }
+
+    // C) Imagen del cráneo abierto bloqueada: el hero sigue completo con el cráneo cerrado
+    p = await abrirPagina({ ancho, alto, perfil: "ahorro-datos", chrome: o.chrome });
+    try {
+      await p.cdp.send("Network.setBlockedURLs", { urls: ["*craneo-abierto*"] });
+      await p.ir(base + "index.html");
+      await esperar(1200);
+      const geo = await p.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario'); return h.offsetHeight - e.offsetHeight + h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0); })()`);
+      await p.evaluar(`window.scrollTo({ top: ${Math.round(geo)}, behavior: 'instant' })`);
+      await esperar(2500);
+      const e = await p.evaluar(ESTADO_MODOS);
+      ok(e.fallo && e.poster === 1 && e.eslogan === 1 && e.boton === 1 && e.clic === "auto" && !e.listo, `imagen abierta bloqueada: póster ${e.poster}, eslogan ${e.eslogan}, botón ${e.boton}, clic ${e.clic}, fallo ${e.fallo}`);
+    } finally { await p.cerrar(); }
+
+    // D) Modelo 3D bloqueado en un equipo capaz: pasa a la composición final sin mover nada
+    p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
+    try {
+      await p.cdp.send("Network.setBlockedURLs", { urls: ["*.glb"] });
+      await p.ir(base + "index.html");
+      await esperar(1000);
+      const antes = await p.evaluar(ESTADO_MODOS);
+      await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 30000);
+      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
+      await esperar(1200);
+      const e = await p.evaluar(ESTADO_MODOS);
+      ok(antes.hero === "animado" && finalOk(e) && e.abierto === 1 && e.poster === 0 && !e.canvas, `3D bloqueado: de animado a estático final (apertura ${e.apertura}, abierto ${e.abierto}, póster ${e.poster}, sin canvas)`);
+      ok(antes.cajas === e.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === e.cajas ? "idénticos" : antes.cajas + " → " + e.cajas})`);
+    } finally { await p.cerrar(); }
+
+    // E) Pérdida del contexto WebGL con el 3D ya mostrado
+    p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome });
+    try {
+      await p.ir(base + "index.html");
+      await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 90000);
+      await esperar(800);
+      const antes = await p.evaluar(ESTADO_MODOS);
+      await p.evaluar("(() => { const gl = document.querySelector('.hero__canvas').getContext('webgl2') || document.querySelector('.hero__canvas').getContext('webgl'); gl.getExtension('WEBGL_lose_context').loseContext(); })()");
+      await p.esperarHasta("document.documentElement.dataset.hero === 'estatico'", 20000);
+      await p.esperarHasta("document.documentElement.hasAttribute('data-abierto-listo')", 20000).catch(() => {});
+      await esperar(1200);
+      const e = await p.evaluar(ESTADO_MODOS);
+      ok(antes.is3d && finalOk(e) && e.abierto === 1 && e.poster === 0 && !e.canvas, `contexto WebGL perdido: del 3D a la composición final (apertura ${e.apertura}, abierto ${e.abierto}, póster ${e.poster}, sin canvas)`);
+      ok(antes.cajas === e.cajas, `cabecera, cráneo y contacto no se mueven (${antes.cajas === e.cajas ? "idénticos" : antes.cajas + " → " + e.cajas})`);
+    } finally { await p.cerrar(); }
+  }
+  return fallos ? 1 : 0;
+}
+
 /** Utilidad de depuración: evalúa una expresión en la página. Uso: evaluar --tamano 390x844 --js "expresión" [--perfil p] [--ir ruta] */
 async function evaluar(base, o) {
   const [ancho, alto] = String(o.tamano || "1440x900").split("x").map(Number);
@@ -547,7 +666,7 @@ async function evaluar(base, o) {
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red };
+const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red, modos };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);

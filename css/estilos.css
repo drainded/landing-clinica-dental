@@ -480,6 +480,12 @@ html[data-transicion] .hero__servicios:focus-visible,
   opacity: 1;
   transform: none;
 }
+/* Si la imagen del cráneo abierto falla, el póster cerrado se queda y el eslogan y el botón se ven siempre */
+html[data-abierto-fallo] .hero__revelado {
+  --rev-eslogan: 1;
+  --rev-boton: 1;
+}
+html[data-abierto-fallo] .hero__servicios { pointer-events: auto; }
 .hero__contacto {
   grid-row: 3;
   position: relative;
@@ -544,6 +550,23 @@ html[data-transicion] .hero__servicios:focus-visible,
     min-height: 26rem;
   }
   .hero__figura { max-width: 17rem; aspect-ratio: 524 / 564; }
+}
+
+/* Composición final (cráneo abierto, eslogan y botón en la boca) sin anclaje ni recorrido: movimiento reducido
+   (también si se activa con la página abierta) y móvil apaisado bajo, donde el hero no cabe en pantalla.
+   js/principal.js escribe --apertura: 1 y quita data-transicion en esos casos; esto evita el salto mientras tanto. */
+@media (prefers-reduced-motion: reduce) {
+  .hero__canvas,
+  .hero__figura.is-3d .hero__poster,
+  .hero__figura.is-3d .hero__abierto { transition: none; }
+  html[data-transicion] .hero { --apertura: 1; }
+  html[data-transicion] .hero::after { display: none; }
+  html[data-transicion] .hero__escenario { position: relative; top: auto; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  html[data-transicion] .hero { --apertura: 1; }
+  html[data-transicion] .hero::after { display: none; }
+  html[data-transicion] .hero__escenario { position: relative; top: auto; }
 }
 
 /* ---------- 6. Servicios ---------- */

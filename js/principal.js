@@ -602,11 +602,35 @@
     }
   }
 
-  /** Modo estático (sin 3D): con data-transicion el scroll gobierna la apertura; en el resto, composición final. */
+  /**
+   * Modo estático (sin 3D): con data-transicion el scroll gobierna la apertura; en el resto, composición final
+   * (cráneo abierto, eslogan y botón en la boca, sin animación). Si con la transición activa la persona pide
+   * «reducir movimiento» o el móvil pasa a horizontal bajo (el hero no cabe en pantalla), se pasa a la composición
+   * final: se detiene el control por scroll, se quita data-transicion y --apertura queda en 1.
+   */
   function iniciarEstatico() {
+    var raiz = document.documentElement;
     var hero = document.getElementById("inicio");
-    if (!hero || !document.documentElement.hasAttribute("data-transicion")) return;
-    controlarTransicionScroll(hero);
+    if (!hero || !raiz.hasAttribute("data-transicion")) return;
+    var detener = null;
+
+    function aComposicionFinal() {
+      if (detener) { detener(); detener = null; }
+      raiz.removeAttribute("data-transicion");
+      hero.style.setProperty("--apertura", "1");
+      hero.setAttribute("data-revelado", "");
+      habilitarImagenAbierta(hero, "inmediato");
+    }
+
+    if (window.matchMedia) {
+      var alCambiar = function (e) { if (e.matches) aComposicionFinal(); };
+      var reducir = window.matchMedia("(prefers-reduced-motion: reduce)");
+      var apaisado = window.matchMedia(CONSULTA_APAISADO_BAJO);
+      if (reducir.addEventListener) reducir.addEventListener("change", alCambiar);
+      if (apaisado.addEventListener) apaisado.addEventListener("change", alCambiar);
+      if (apaisado.matches) { aComposicionFinal(); return; }
+    }
+    detener = controlarTransicionScroll(hero);
     habilitarImagenAbierta(hero, "transicion");
   }
 
@@ -631,6 +655,13 @@
 
     var liberarBloqueo = captura ? function () {} : publicarApertura(hero);
 
+    // Si el 3D falla (sin WebGL, modelo, contexto perdido, FPS bajos) el hero pasa a la composición final: la
+    // apertura queda en 1 (lo hace el bloqueo al liberarse) y se pide ya el cráneo abierto; mientras llega se
+    // ve el póster cerrado. No se reconfigura el hero (sin anclaje ni recorrido) para no mover nada.
+    document.addEventListener("dentadura:estado", function (e) {
+      if (e.detail && e.detail.estado === "estatico") habilitarImagenAbierta(hero, "inmediato");
+    });
+
     var nivel = elegirNivel();
     var rutaModelo = nivel === "ligero" ? RUTA_MODELO_LIGERO : RUTA_MODELO_COMPLETO;
 
@@ -645,6 +676,7 @@
         detectorModelo = null;
         raiz.dataset.hero = "estatico";
         liberarBloqueo();
+        habilitarImagenAbierta(hero, "inmediato");
       };
       if (reducir.addEventListener) reducir.addEventListener("change", alCambiar);
     }

@@ -62,7 +62,9 @@
 
 <link rel="preload" as="image" href="assets/img/fondo-hero-movil.webp" media="(orientation: portrait)">
 <link rel="preload" as="image" href="assets/img/fondo-hero-pc.webp" media="(orientation: landscape)">
-<link rel="preload" as="image" href="assets/img/craneo-cerrado.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/craneo-cerrado.webp" fetchpriority="high" media="(prefers-reduced-motion: no-preference)">
+<link rel="preload" as="image" href="assets/img/craneo-abierto-escritorio.webp" fetchpriority="high" media="(prefers-reduced-motion: reduce) and (min-width: 1024px)">
+<link rel="preload" as="image" href="assets/img/craneo-abierto-movil.webp" fetchpriority="high" media="(prefers-reduced-motion: reduce) and (max-width: 1023.98px)">
 
 <script>
 /* Decide el modo del hero antes del primer pintado: 'estatico' (imágenes) o 'animado' (3D). Con 'estatico' y sin

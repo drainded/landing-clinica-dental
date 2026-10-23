@@ -75,3 +75,18 @@ Registro de resultados (principio IX). Guía: [quickstart.md](quickstart.md). He
 - **Revisión visual** (1920 × 1080 y 390 × 844, cerrado y abierto): composición equilibrada, hilos nítidos, textos legibles. En móvil anclado la franja bajo el escenario se funde con el borde inferior del fondo (sin banda visible; al final del anclaje aparece la sección siguiente, como corresponde).
 - **Limpieza**: el degradado CSS de velos y los tokens `--velo-1-suave` / `--velo-2-suave` (ya sin uso) se eliminaron; `fondo-hero-estatico.jpg` pasó a `referencias/herramientas/fuentes/` (no se publica).
 - **Observación (anterior a esta feature)**: a 1920 × 1080 con el cráneo abierto, el horario del hero se superpone al borde inferior del mentón (misma geometría que el 3D); se mantiene por la exigencia de «misma posición que el 3D».
+
+## Fase 6 · US4 — Movimiento reducido, ahorro de datos y fallos (T025–T027)
+
+**Fecha**: 2026-10-22 · `hero.mjs modos` (390 × 844 y 1440 × 900), `hero.mjs red` y `hero.mjs transicion`. Todos los escenarios en OK en ambos tamaños.
+
+- **Movimiento reducido** (perfil `movimiento-reducido`, emulación de `prefers-reduced-motion`): composición final desde el primer pintado (`--apertura` 1, cráneo abierto opacidad 1, póster 0, eslogan y botón 1, botón con `pointer-events: auto`, escenario sin anclaje). Se pide solo la variante del cráneo abierto de ese tamaño (`craneo-abierto-movil` a 390 px, `craneo-abierto-escritorio` a 1440 px), sin `loading="lazy"` y con `fetchpriority="high"`; no se pide `three-dentadura.min.js` ni el `.glb`. **Ningún píxel del escenario cambia** al mover el cursor por el hero ni al hacer scroll y volver (capturas idénticas byte a byte).
+- **Reducir movimiento con la página abierta y la transición a medias** (apertura 0,26 y 0,35): pasa a la composición final (`--apertura` 1, sin anclaje) sin recargar.
+- **Imagen del cráneo abierto bloqueada** (`*craneo-abierto*`): tras llegar al final del recorrido queda `data-abierto-fallo`, el póster cerrado permanece (opacidad 1), eslogan y botón visibles y pulsables.
+- **Modelo 3D bloqueado** (`*.glb`) en un equipo capaz: el hero pasa de `animado` a `estatico` con la composición final; tras cargar el cráneo abierto, póster 0 / abierto 1, sin canvas. **Cabecera, figura y contacto no se mueven** (rectángulos idénticos antes y después).
+- **Pérdida del contexto WebGL** (`WEBGL_lose_context`) con el 3D ya mostrado: mismo resultado y mismos rectángulos idénticos.
+- **Ahorro de datos**: antes del primer scroll solo se piden el fondo y el cráneo cerrado; el cráneo abierto se pide al empezar a desplazarse (`hero.mjs red --scroll`).
+- **Móvil apaisado bajo** (844 × 390): composición final y página normal, sin anclaje (`data-transicion` se retira); el contacto está en la barra fija inferior.
+- **Teclado**: Tab llega a «Conoce nuestros servicios» y lo muestra con foco (verificado en la Fase 4; la regla `:focus-visible` gana ahora a `pointer-events: none`).
+- **LCP**: Chrome sin interfaz no emitió el evento de LCP; el elemento LCP de cada modo se confirma con Lighthouse en T031.
+- **Nota**: en 844 × 390 el botón «Agende su cita» queda bajo el pliegue de la página normal (no se considera «tapado»: es una página con scroll nativo y el contacto sigue en la barra fija).
