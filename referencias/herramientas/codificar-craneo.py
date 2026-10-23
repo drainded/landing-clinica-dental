@@ -34,6 +34,7 @@ def main():
     ap.add_argument("--salida", required=True, help="ruta del WebP de destino")
     ap.add_argument("--ancho-poster", type=int, default=800, help="ancho en px del rectángulo del póster (densidad)")
     ap.add_argument("--max-kb", type=float, default=60.0)
+    ap.add_argument("--calidad", type=int, default=80, help="calidad WebP de partida (baja de 5 en 5 hasta cumplir --max-kb)")
     ap.add_argument("--carpeta", default=SALIDA)
     a = ap.parse_args()
 
@@ -66,7 +67,7 @@ def main():
     img = recorte.resize((salida_w, salida_h), Image.LANCZOS)
 
     elegido = None
-    for calidad in range(90, 29, -5):
+    for calidad in range(a.calidad, 29, -5):
         buf = io.BytesIO()
         img.save(buf, "WEBP", quality=calidad, method=6)
         kb = buf.tell() / 1024

@@ -99,3 +99,23 @@ Registro de resultados (principio IX). Guía: [quickstart.md](quickstart.md). He
 - Al abrir con el bloqueo de introducción antes de que cargue el 3D (apertura 0,86–0,88): se pide el cráneo abierto; cuando llega, el cráneo estático sigue la apertura (póster 0, abierto 1, eslogan 1) y no queda el eslogan sobre un cráneo cerrado.
 - Al llegar el 3D: póster y abierto pasan a 0 y el canvas queda listo; **cabecera, figura y contacto no se mueven** (rectángulos idénticos antes y después). En 220–230 muestras cada 50 ms ninguna tuvo póster, abierto y canvas a la vez por debajo de 0,5 de opacidad: **sin parpadeo**.
 - **Cambio de fondo en el relevo** (riesgo R6b, revisión visual en 1440 × 900): al llegar el 3D, el fondo pasa de la imagen (pálida, hilos finos) a los velos procedimentales del 3D (más saturados) con el fundido de 0,4 s existente. Las posiciones son idénticas y el cambio se lee como un cambio de ambiente, no como un salto. **Decisión pendiente del cliente**: aceptarlo tal cual o abrir una spec para usar la imagen (o sus tonos) también en el 3D.
+
+## Fase 8 · Pesos, carga y Lighthouse (T031)
+
+**Fecha**: 2026-10-22 · pesos con gzip -9 para HTML/CSS/JS (Netlify sirve brotli, algo menor); imágenes y fuentes ya comprimidas. Lighthouse 13 móvil (simulado «4G lenta»), Chrome sin interfaz con render **por software** (SwiftShader), servidor local sin compresión ni caché.
+
+**Imágenes del cráneo recodificadas a calidad 80** para ganar margen de LCP (siguen siendo degradados suaves; sin diferencia visible): `craneo-cerrado.webp` 36 KB, `craneo-abierto-movil.webp` 29 KB, `craneo-abierto-escritorio.webp` 31 KB (límite 60 KB). Posición frente al 3D re-comprobada en 390 × 844 y 1440 × 900: silueta ≤ 0,91 %, cajas 0 px.
+
+| Modo (carga crítica) | Peso | Límite |
+|---|---|---|
+| 3D o estático con transición, escritorio | ≈ 150 KB | 500 KB |
+| 3D o estático con transición, móvil | ≈ 140 KB | 500 KB |
+| Movimiento reducido, móvil / escritorio (añade el cráneo abierto con prioridad) | ≈ 170 / 175 KB | 500 KB |
+
+(HTML 6 KB + CSS 7 KB + `principal.js` 10 KB + logo/favicon + fuentes 63 KB + póster 36 KB + fondo 32 o 22 KB.) `principal.js` pasó de 6,7 a 10 KB (gzip). Diferida del 3D: escritorio ≈ 377 KB (three.js 158 KB gzip, ≈ 139 KB con brotli, + `dentadura.js` 10 KB + `craneo.glb` 209 KB), móvil ≈ 242 KB (límite 1,5 MB). Diferida del modo estático: cráneo abierto 29 o 31 KB. Dominios externos: 0 (`hero.mjs red`).
+
+**Lighthouse móvil, modo estático** (bandera `--force-prefers-reduced-motion`, que es la composición final; la imagen LCP es el cráneo abierto): Rendimiento 94 – 97 en cinco ejecuciones; Accesibilidad 100, Prácticas recomendadas 100, SEO 100; LCP 2,4 s; FCP 0,9 – 1,5 s; TBT 50 – 130 ms; CLS 0 – 0,003. La versión anterior (póster sobre degradado) daba 99 en el mismo entorno, con LCP 2,0 s: la diferencia son los bytes extra de la segunda imagen del cráneo y del fondo.
+
+**Lighthouse móvil, modo 3D**: no es evaluable en este entorno. Con WebGL por software el Total Blocking Time (compilar shaders y dibujar en CPU) hace oscilar el resultado entre 35 y 69 **también en la versión anterior** (68, 39 y 38 en tres ejecuciones; la actual 35, 69 y 40): es ruido del entorno, no una regresión. Queda para la prueba en móvil real (T032).
+
+**Comprobación entre navegadores del cambio dinámico de `media` en los `<source>`**: verificada en Chrome (en los modos diferidos la imagen real solo se pide tras `habilitarImagenAbierta`, y al cambiar el `media` se pide). **Pendiente**: Firefox y Safari (no disponibles en este equipo; el comportamiento está definido por la especificación de HTML —cambiar el `media` de un `<source>` vuelve a seleccionar la imagen—). Si alguno no la pidiera, plan B del contrato: asignar `srcset` desde `js/principal.js`. Se incluye en la prueba en móvil real (Safari de iOS).
