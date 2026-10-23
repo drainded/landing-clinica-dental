@@ -75,12 +75,12 @@ Fase 0 de `/speckit-plan`. Cada punto sigue el formato *Decisión · Motivo · A
 |---|---|---|
 | Fondo (PC / móvil) | crítica | `background-image` con `@media (orientation: portrait)` (vertical) / apaisado; `preload` con el mismo `media`; `background-color` = token de fondo como respaldo |
 | Cráneo cerrado | crítica | `<img>` actual con `fetchpriority="high"`; `preload` con `media="(prefers-reduced-motion: no-preference)"` |
-| Cráneo abierto | diferida | `<picture>` con `loading="lazy"` oculto con `display: none` hasta que JS lo habilita (los navegadores no piden imágenes `lazy` sin caja); JS lo habilita al quedar libre tras `load`, salvo ahorro de datos, que espera al primer desplazamiento; en modo 3D solo si `--apertura > 0` antes de que el 3D esté listo |
-| Cráneo abierto (movimiento reducido / sin JS) | crítica | visible por defecto, `preload` con `media="(prefers-reduced-motion: reduce)"`; el cerrado no se pide |
+| Cráneo abierto (modos con 3D o con transición) | diferida | `<picture>` cuyo `<img>` arranca con un GIF de 1 × 1 en `data:` (sin petición) y cuyos `<source>` llevan `media` con `prefers-reduced-motion: reduce`; `habilitarImagenAbierta` cambia el `media` de los `<source>` (a `(min-width: 1024px)` y `all`) y el navegador pide la imagen real. Cuándo: tras `load` + inactividad; con ahorro de datos, en el primer desplazamiento; en modo 3D, solo si `--apertura > 0` antes de que el 3D esté listo |
+| Cráneo abierto (movimiento reducido / sin JS) | crítica | los `<source>` ya casan por `media`: la imagen real se pide enseguida, con `fetchpriority="high"` y sin `loading="lazy"` (es el LCP de ese modo); `preload` con `media` equivalente |
 
-**Motivo**: cada perfil descarga lo mínimo; el LCP de movimiento reducido es la imagen abierta y el del resto es el cráneo cerrado o el fondo.
+**Motivo**: un único `<img>` sirve a todos los modos sin `lazy` ni `display: none` (que dejaban el LCP de movimiento reducido sin prioridad y exigían un truco distinto por navegador). El cráneo cerrado se descarga siempre (24–60 KB): evitarlo en movimiento reducido exigiría otro mecanismo y no compensa. El póster cerrado permanece visible hasta que el abierto carga (`data-abierto-listo`), de modo que el área del cráneo nunca queda vacía, ni siquiera cuando el 3D degrada.
 
-**A verificar** (quickstart E6): que Chrome, Firefox y Safari no piden las imágenes ocultas con `display: none` + `loading="lazy"`; si alguno las pidiera, se sustituye por `data-src` asignado desde `principal.js`.
+**A verificar** (quickstart E6): que cambiar `source.media` dinámicamente hace que Chrome, Firefox y Safari pidan la imagen; si alguno no lo hiciera, se asigna `srcset` desde `principal.js`.
 
 ## R7 — Fondo: evaluación de la imagen original y decisión
 

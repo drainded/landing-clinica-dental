@@ -14,7 +14,7 @@ Enfoque técnico (detalle en [research.md](research.md)):
 - **Transición** = fundido póster cerrado → imagen abierta con las mismas curvas que el 3D (`smoothstep(apertura / 0,7)`) y una **traslación compensatoria** (la cámara del 3D baja hacia la boca) para que no haya doble perfil. Solo `opacity` y `transform`.
 - **Las imágenes del cráneo salen del propio módulo 3D** (opción `captura` de desarrollo en `js/dentadura.js`, capturada con Chrome sin interfaz): mismos shaders, cámara, encuadre y difuminado bajo los textos. Dos variantes del abierto (móvil y escritorio) porque el difuminado depende del formato.
 - **Fondo**: la original (735 × 595 px) se amplía y limpia (camino A) o se recompone en el mismo estilo (camino B), para PC (1920 × 1080) y móvil (828 × 1792), con la banda oscura retirada de las zonas de texto para cumplir 4,5 : 1.
-- **Carga**: fondo y cráneo cerrado críticos; cráneo abierto diferido (o inmediato con movimiento reducido), con `preload` condicionado por `media`.
+- **Carga**: fondo y cráneo cerrado críticos; cráneo abierto diferido (o inmediato y con prioridad alta con movimiento reducido) mediante un `<picture>` cuyo `<img>` arranca con un GIF vacío y cuyos `<source>` se activan por `media` desde JS; el póster cerrado permanece visible hasta que el abierto esté listo (`data-abierto-listo`).
 
 ## Technical Context
 
@@ -34,7 +34,7 @@ Enfoque técnico (detalle en [research.md](research.md)):
 
 **Constraints**: carga crítica ≤ 500 KB (estimada 140–230 KB); fondo PC ≤ 80 KB y móvil ≤ 50 KB; cada cráneo ≤ 60 KB; 0 peticiones a dominios externos; scroll nativo nunca bloqueado en modo estático; contacto siempre visible; colores solo desde tokens (las imágenes son activos).
 
-**Scale/Scope**: cambios en `index.html` (marcado del hero, `preload`, script del `<head>`), `css/estilos.css` (hero), `js/principal.js` (≈ +70 líneas), `js/dentadura.js` (opción `captura`, ≈ +25 líneas), 5 imágenes (2 de fondo, 1 cerrado, 2 abiertos) y 4 herramientas de desarrollo.
+**Scale/Scope**: cambios en `index.html` (marcado del hero, `preload`, script del `<head>`), `css/estilos.css` (hero), `js/principal.js` (≈ +70 líneas), `js/dentadura.js` (opción `captura`, ≈ +25 líneas), 5 imágenes (2 de fondo, 1 cerrado, 2 abiertos) y 3 herramientas de desarrollo (`hero.mjs`, `codificar-craneo.py`, `generar-fondo.py`).
 
 ## Constitution Check
 
@@ -52,7 +52,7 @@ Enfoque técnico (detalle en [research.md](research.md)):
 | VIII | Accesibilidad y responsive | ✅ con verificación | Imágenes `alt=""`/`aria-hidden`; eslogan y botón son texto real, alcanzables con Tab y visibles con `:focus-visible` aunque `apertura = 0`; contraste ≥ 4,5 : 1 comprobado por script (R7); sin desplazamiento horizontal en 360 px; 200 % de zoom; movimiento reducido sin animación. |
 | IX | Verificación | ✅ | [quickstart.md](quickstart.md) E1–E9, con prueba en móvil real y registro en `verificacion.md`. |
 
-**Gate**: sin violaciones sin justificar → se puede continuar. Las dos enmiendas (V y VI) son aclaraciones de redacción (PATCH/MINOR → v2.3.1 o v2.4.0) que se aplican junto con el código, y la decisión **D-19** se registra en `SPEC.md` §11.
+**Gate**: sin violaciones sin justificar → se puede continuar. Las dos enmiendas (V y VI) amplían la guía (MINOR → **v2.4.0**) y la decisión **D-19** se registra en `SPEC.md` §11: ambas se hacen **antes** de escribir el código de la feature (son las primeras tareas de la Fase 1 de `tasks.md`), no al final.
 
 **Re-evaluación post-diseño**: sin cambios. El diseño de Fase 1 no añade dependencias ni peso fuera del presupuesto; se confirma que el modo estático no necesita interceptar el scroll.
 
@@ -90,10 +90,9 @@ assets/img/
 ├── craneo-abierto-movil.webp      # NUEVO · ≤ 60 KB (difuminado horneado a 390 × 844)
 (fondo-hero-estatico.jpg)          # original del cliente: se mueve a referencias/herramientas/fuentes/ (ver nota)
 referencias/herramientas/          # NUEVO · no se publica
-├── capturar-craneo.mjs
-├── codificar-craneo.py
-├── generar-fondo.py
-└── comparar-hero.mjs
+├── hero.mjs                       # Node + CDP: subcomandos capturar | cajas | comparar y perfiles de modo
+├── codificar-craneo.py            # PNG + JSON → WebP ≤ 60 KB
+└── generar-fondo.py               # fondos PC/móvil + medición de contraste
 SPEC.md                            # D-19
 .specify/memory/constitution.md    # enmienda de V y VI
 ```
@@ -107,6 +106,7 @@ SPEC.md                            # D-19
 | Enmienda de los principios V y VI (dos imágenes de cráneo; transición por scroll en nivel estático) | El diseño pedido exige una segunda imagen y una transición; el texto actual habla de «el póster» en singular | Mantener una sola imagen → no puede mostrar la boca abierta ni la posición del eslogan del 3D |
 | Opción `captura` en `js/dentadura.js` | Es la única forma de generar el cráneo abierto con los mismos shaders, cámara y difuminado que el 3D (FR-002) | Capturas manuales o otro motor de render → no reproducibles ni exactos; no cumplirían ≤ 2 % |
 | Dos variantes del cráneo abierto (móvil y escritorio) | El difuminado bajo los textos depende del formato de pantalla (R5) | Una sola variante → el difuminado no coincidiría con los textos en uno de los dos formatos |
+| Python/Pillow como herramienta de desarrollo (`referencias/herramientas/*.py`) | Es lo que ya está instalado y codifica WebP con control de calidad; no forma parte del sitio ni de su publicación | Reescribirlas en Node → requeriría una dependencia nueva (p. ej. `sharp`) |
 | Anclaje `sticky` con recorrido extra (`≈ 80svh`) en modo estático | La transición por scroll necesita que el hero permanezca a la vista | Desplazarse normalmente mientras cambia la imagen → el eslogan saldría antes de poder leerse |
 
 ## Riesgos y puntos abiertos para `/speckit-tasks`
@@ -115,7 +115,7 @@ SPEC.md                            # D-19
 2. **Difuminado en ventanas intermedias** (R5): contraste a validar en 6 tamaños; plan B: tercera variante o difuminado más generoso.
 3. **Doble perfil a mitad de transición** (R3): si la traslación compensatoria no basta, se pasa a 5–8 fotogramas intermedios.
 4. **Franja inferior en móvil durante el anclaje**: el escenario mantiene su altura y deja ≈ 76 px hasta la barra fija; depende de que los bordes del fondo terminen en `--color-velo-fondo`.
-5. **`display: none` + `loading="lazy"`** (R6): comprobar en Chrome, Firefox y Safari; plan B con `data-src`.
+5. **Cambio dinámico de `media` en los `<source>`** (R6): comprobar en Chrome, Firefox y Safari que dispara la carga; plan B: asignar `srcset` desde JS.
 6. **Cambio de fondo en el relevo a 3D** (R6b): revisión visual; si no es aceptable, nueva spec para usar la imagen en el 3D.
 7. **Distancia `D`** (80 svh): afinar con prueba en móvil real (inercia, barra de direcciones que se oculta y cambia `svh`).
 8. **Rama y control de versiones**: crear `002-hero-estatico-scroll` y versionar `fondo-hero-estatico.jpg` antes de implementar.

@@ -12,6 +12,8 @@ No hay datos persistentes. El «modelo» es el estado en memoria del hero y el i
 | `revEslogan` | 0–1 | `clamp((apertura − 0,3) / 0,3)` (regla existente). |
 | `revBoton` | 0–1 | `clamp((apertura − 0,4) / 0,3)` (regla existente). |
 | `revelado` | booleano | Atributo `data-revelado` en `#inicio`; histéresis ON > 0,5 · OFF < 0,45 (existente); habilita el clic del botón. |
+| `abiertoListo` | booleano | Atributo `data-abierto-listo` en `<html>`. Verdadero cuando la imagen real del cráneo abierto ya cargó. **El póster cerrado solo desaparece cuando `abiertoListo` es verdadero; antes de eso `t` no oculta ninguna pose.** |
+| `abiertoFallo` | booleano | Atributo `data-abierto-fallo`: la imagen abierta falló; eslogan y botón quedan siempre visibles y el póster no se oculta. |
 
 **Validación**: `apertura` siempre acotada a [0, 1]; con `fuente = fija` vale `1` y no cambia.
 
