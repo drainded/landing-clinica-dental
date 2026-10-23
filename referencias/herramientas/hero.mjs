@@ -144,11 +144,14 @@ async function abrirPagina({ ancho, alto, perfil = "normal", chrome }) {
   await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__cls=0;window.__clsDet=[];try{new PerformanceObserver((l)=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__cls+=e.value;window.__clsDet.push({v:+e.value.toFixed(4),t:Math.round(e.startTime),n:e.sources.map((x)=>[x.node?((x.node.className&&x.node.className.baseVal===undefined?x.node.className:'')||x.node.nodeName):'?',[x.previousRect.x,x.previousRect.y,x.previousRect.width,x.previousRect.height].map(Math.round),[x.currentRect.x,x.currentRect.y,x.currentRect.width,x.currentRect.height].map(Math.round)])})}}).observe({type:'layout-shift',buffered:true})}catch(_){}" });
 
   const peticiones = [];
-  cdp.oyentes.set("Network.requestWillBeSent", new Set([(p) => peticiones.push(p.request.url)]));
+  const porId = new Map();
+  cdp.oyentes.set("Network.requestWillBeSent", new Set([(p) => { peticiones.push(p.request.url); porId.set(p.requestId, { url: p.request.url, bytes: 0 }); }]));
+  cdp.oyentes.set("Network.loadingFinished", new Set([(p) => { const r = porId.get(p.requestId); if (r) r.bytes = p.encodedDataLength; }]));
 
   const api = {
     cdp,
     peticiones,
+    recursos: () => [...porId.values()],
     async ir(url) {
       peticiones.length = 0;
       const carga = cdp.una("Page.loadEventFired");
@@ -502,6 +505,32 @@ async function extrasTransicion(pagina, ancho, alto, recorrido, inicio) {
   return fallos;
 }
 
+/**
+ * Qué se pide y cuánto pesa (sin compresión del servidor local). Uso: red --tamano 390x844 --perfil ahorro-datos [--scroll]
+ * --scroll desplaza un poco el hero antes de listar, para ver qué se pide al empezar a desplazarse.
+ */
+async function red(base, o) {
+  const [ancho, alto] = String(o.tamano || "1440x900").split("x").map(Number);
+  const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "normal", chrome: o.chrome });
+  try {
+    await pagina.ir(base + (o.ir || "index.html"));
+    await esperar(Number(o.espera || 4000));
+    const antes = new Set(pagina.recursos().map((r) => r.url));
+    if (o.scroll) { await pagina.evaluar("window.scrollTo({ top: 120, behavior: 'instant' })"); await esperar(2500); }
+    const nombre = (u) => u.replace(base, "").slice(0, 70);
+    console.log(`${ancho}×${alto} · perfil ${o.perfil || "normal"}${o.scroll ? " · con scroll" : ""}`);
+    let total = 0;
+    for (const r of pagina.recursos()) {
+      if (r.url.startsWith("data:")) { console.log(`  ${"(datos)".padEnd(70)} ${String(r.bytes).padStart(8)} B${antes.has(r.url) ? "" : "  ← tras el scroll"}`); continue; }
+      total += r.bytes;
+      console.log(`  ${nombre(r.url).padEnd(70)} ${String(r.bytes).padStart(8)} B${antes.has(r.url) ? "" : "  ← tras el scroll"}`);
+    }
+    console.log(`  total sin comprimir: ${(total / 1024).toFixed(0)} KB · dominios externos: ${pagina.recursos().filter((r) => !r.url.startsWith(base) && !r.url.startsWith("data:")).length}`);
+  } finally {
+    await pagina.cerrar();
+  }
+}
+
 /** Utilidad de depuración: evalúa una expresión en la página. Uso: evaluar --tamano 390x844 --js "expresión" [--perfil p] [--ir ruta] */
 async function evaluar(base, o) {
   const [ancho, alto] = String(o.tamano || "1440x900").split("x").map(Number);
@@ -518,7 +547,7 @@ async function evaluar(base, o) {
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar };
+const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);

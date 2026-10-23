@@ -52,8 +52,6 @@
   --color-velo-2: #2F86B7;
   --color-rayosx: #0D2B57;
   --color-rayosx-luz: #A9BBD8;
-  --velo-1-suave: rgba(142, 210, 228, .55);
-  --velo-2-suave: rgba(47, 134, 183, .30);
 
   /* Tipografía */
   --fuente-titulos: 'Poppins', system-ui, -apple-system, sans-serif;
@@ -307,11 +305,17 @@ html[data-transicion] .hero__escenario {
   gap: var(--espacio-2);
   padding: var(--espacio-3) var(--espacio-3) var(--espacio-2);
   text-align: center;
+  /* Fondo de imagen con una versión apaisada (PC) y otra vertical (móvil): el navegador pide solo la que casa.
+     Mientras llega se ve el color liso del token; con el 3D listo el canvas lo cubre. */
   background-color: var(--color-velo-fondo);
-  background-image:
-    linear-gradient(160deg, transparent 8%, var(--velo-1-suave) 34%, transparent 54%),
-    linear-gradient(200deg, transparent 30%, var(--velo-2-suave) 62%, transparent 84%),
-    linear-gradient(100deg, var(--velo-1-suave), transparent 42%);
+  background-size: cover;
+  background-position: center;
+}
+@media (orientation: landscape) {
+  .hero__escenario { background-image: url('../assets/img/fondo-hero-pc.webp'); }
+}
+@media (orientation: portrait) {
+  .hero__escenario { background-image: url('../assets/img/fondo-hero-movil.webp'); }
 }
 .hero__escenario > :not(.hero__canvas) { grid-column: 1; }
 .hero__canvas {
