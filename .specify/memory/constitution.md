@@ -1,5 +1,27 @@
 <!--
 Sync Impact Report
+- Version change: 2.3.0 → 2.4.0 (MINOR: se amplía la guía del respaldo estático del hero; no se
+  elimina ni se debilita ningún principio; el scroll nativo y el acceso a contacto no cambian)
+- Modified principles:
+  - III. Presupuesto de peso: el elemento LCP del modo con movimiento reducido es la imagen del
+    cráneo abierto (no el póster cerrado); debe cargarse con prioridad (sin lazy).
+  - V. Modelo 3D: el respaldo estático pasa de «un póster» a dos imágenes de cráneo generadas desde
+    el propio modelo (cerrado y abierto, con una variante del abierto para móvil y otra para
+    escritorio), de máximo 60 KB cada una, más un fondo de imagen con versión para PC (≤ 80 KB) y
+    para móvil (≤ 50 KB).
+  - VI. Adaptación al dispositivo: el nivel (a) deja de ser «solo el póster estático»: usa las
+    imágenes estáticas. Con movimiento reducido se muestra la composición final sin animación; con
+    ahorro de datos o equipo lento (sin movimiento reducido) puede haber una transición por scroll
+    nativo que solo anima opacity/transform, nunca bloquea el scroll y no es «scroll suave» (Lenis).
+  - Resto de principios: sin cambios.
+- Added sections: ninguna
+- Removed sections: ninguna
+- Follow-up TODOs:
+  - SPEC.md: D-19 registrada (hero estático rediseñado, spec 002).
+  - Verificar la transición estática en móvil real (principio IX).
+-->
+<!--
+Sync Impact Report
 - Version change: 2.2.0 → 2.3.0 (MINOR: se admite una excepción acotada a la regla de no
   bloquear el scroll; no se elimina el principio II ni se debilita el acceso a contacto)
 - Modified principles:
@@ -119,8 +141,8 @@ Se mide el peso transferido, comprimido.
 - Total en escritorio: máximo aproximado de 2 MB. En móvil de gama media: máximo aproximado de
   1,5 MB.
 - Contenido principal visible en menos de 2,5 s en 4G, sin desplazamiento de contenido durante
-  la carga. El póster estático de la dentadura es el elemento LCP y MUST estar declarado con
-  `width`/`height` y cargarse con prioridad.
+  la carga. El póster estático de la dentadura es el elemento LCP (con movimiento reducido, la
+  imagen del cráneo abierto) y MUST estar declarado con `width`/`height` y cargarse con prioridad.
 Ningún cambio se considera terminado si supera estos límites. El peso real MUST medirse y
 reportarse en cada feature.
 
@@ -143,12 +165,20 @@ propios (hueso por mezcla multiplicativa, dientes blancos con iluminación fija 
 procedimentales), sin texturas, sin mapa de entorno y sin luces de three.js; los materiales del
 GLB se sustituyen por ellos. La autoría y la licencia del modelo MUST quedar documentadas en
 `assets/models/README.md` y confirmadas antes de publicar. Se carga de forma diferida, con un
-póster estático WebP (máximo 60 KB) visible mientras carga y siempre que el 3D no pueda mostrarse.
+respaldo estático visible mientras carga y siempre que el 3D no pueda mostrarse. El respaldo
+consta de dos imágenes WebP del cráneo generadas desde el propio modelo con los mismos shaders y
+la misma cámara (cerrado, y abierto con una variante para móvil y otra para escritorio), de
+máximo 60 KB cada una, y de un fondo de imagen con versión para PC (máximo 80 KB) y para móvil
+(máximo 50 KB), de modo que sus posiciones coincidan con las del 3D.
 
 ### VI. Adaptación al dispositivo
 Tres niveles:
-- (a) Con `prefers-reduced-motion`, ahorro de datos, equipo lento o sin WebGL: solo el póster
-  estático, sin 3D ni scroll suave.
+- (a) Con `prefers-reduced-motion`, ahorro de datos, equipo lento o sin WebGL: solo las imágenes
+  estáticas del respaldo (cráneo cerrado y abierto sobre el fondo de imagen), sin 3D ni scroll
+  suave. Con movimiento reducido se muestra la composición final sin ninguna animación; con
+  ahorro de datos o equipo lento (sin movimiento reducido) puede haber una transición por el
+  scroll nativo que anima solo `opacity`/`transform`, nunca bloquea el scroll y no es «scroll
+  suave» (Lenis).
 - (b) Móvil: modelo ligero y límite de resolución de pantalla del render.
 - (c) Escritorio: versión completa.
 La detección usa características disponibles, con degradación segura cuando una API no exista
@@ -203,4 +233,4 @@ material, PATCH para aclaraciones y redacción. Los planes (`plan.md`) MUST incl
 verificación de cumplimiento con los nueve principios, y toda desviación MUST justificarse por
 escrito.
 
-**Version**: 2.1.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-09
+**Version**: 2.4.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-22
