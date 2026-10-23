@@ -116,5 +116,5 @@ SPEC.md                            # D-19
 4. **Franja inferior en móvil durante el anclaje**: el escenario mantiene su altura y deja ≈ 76 px hasta la barra fija; depende de que los bordes del fondo terminen en `--color-velo-fondo`.
 5. **Cambio dinámico de `media` en los `<source>`** (R6): comprobar en Chrome, Firefox y Safari que dispara la carga; plan B: asignar `srcset` desde JS.
 6. **Cambio de fondo en el relevo a 3D** (R6b): revisión visual; si no es aceptable, nueva spec para usar la imagen en el 3D.
-7. **Distancia `D`** (80 svh): afinar con prueba en móvil real (inercia, barra de direcciones que se oculta y cambia `svh`).
+7. ~~**Distancia `D`** (80 svh)~~: obsoleto desde D-21 (se retiró el anclaje y el recorrido). Lo equivalente es la sensibilidad del bloqueo (`DISTANCIA_TOQUE`, `DISTANCIA_RUEDA`), que la prueba en móvil real (2026-10-23) dio por correcta.
 8. **Rama y control de versiones**: crear `002-hero-estatico-scroll` y versionar `fondo-hero-estatico.jpg` antes de implementar.

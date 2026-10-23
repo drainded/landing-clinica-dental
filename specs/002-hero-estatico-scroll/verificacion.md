@@ -141,7 +141,7 @@ Registro de resultados (principio IX). Guía: [quickstart.md](quickstart.md). He
 | VI | Adaptación al dispositivo | ✅ cuatro modos con degradación a la composición final; movimiento reducido sin animación |
 | VII | Rendimiento en ejecución | ✅ solo `opacity`/`transform`; un `scroll` pasivo con rAF que se detiene al llegar al objetivo o salir de pantalla |
 | VIII | Accesibilidad y responsive | ✅ Lighthouse accesibilidad 100; contraste ≥ 4,5 : 1 medido en los seis tamaños; Tab llega al botón; imágenes decorativas; sin desborde en 360–1920 px (a 195 px desborda el documento por el encabezado y las tarjetas, anterior a esta feature) |
-| IX | Verificación | ⚠️ **pendiente la prueba en móvil real** (T032): inercia real, barra de direcciones y Safari de iOS / Firefox para el cambio dinámico de `media` en los `<source>` |
+| IX | Verificación | ✅ prueba en móvil real hecha el 2026-10-23 (Android, Chrome; ver Fase 11). Seguimiento opcional: Safari de iOS / Firefox para el cambio dinámico de `media` en los `<source>` y un teléfono sin «quitar animaciones» |
 
 ## Fase 9 · Ajuste tras la prueba en móvil real: solo dos modos (T034–T037)
 
@@ -155,7 +155,7 @@ Resultados (Chrome sin interfaz, `hero.mjs modos` y `hero.mjs transicion --perfi
 - El 3D falla (modelo bloqueado; contexto WebGL perdido): pasa al modo imágenes con el cráneo cerrado, **cabecera, cráneo y contacto no se mueven** (rectángulos idénticos) y el scroll abre al cráneo abierto.
 - Imagen del cráneo abierto bloqueada: el póster cerrado se queda y el eslogan y el botón se ven y son pulsables.
 - Móvil apaisado bajo (844 × 390): composición final y página normal (única excepción).
-- Pendiente: repetir en el móvil real (T038).
+- Repetido en el móvil real tras la Fase 10 (ver Fase 11).
 
 ## Fase 10 · Bloqueo de introducción también en el modo de imágenes (T038–T041)
 
@@ -170,4 +170,12 @@ Batería completa (Chrome sin interfaz, `hero.mjs`), 390 × 844 y 1440 × 900 sa
 - **`red`**: con ahorro de datos solo se piden el fondo, el póster cerrado y el script; el cráneo abierto se pide al empezar a abrir (`apertura`); en equipo lento se pide tras la carga; 0 dominios externos; crítica 197 KB sin comprimir en móvil.
 - **Lighthouse móvil, modo de imágenes** (bandera `--force-prefers-reduced-motion`; cuatro ejecuciones): Rendimiento 89, 92, 95 y 97 (la dispersión es ruido del render por software); Accesibilidad 100, Prácticas recomendadas 100, SEO 100; LCP 2,3 s; CLS 0; TBT 110–220 ms.
 - **Pruebas ajustadas durante la verificación** (no son cambios de producto): al desplazar la página hasta que el hero sale de pantalla su apertura se reinicia por diseño (comportamiento existente del 3D); con el modelo bloqueado el 3D falla antes de lo que la prueba esperaba.
-- **Pendiente**: T042, repetir en el móvil real (con y sin «quitar animaciones») y en Safari de iOS / Firefox para el cambio dinámico de `media` en los `<source>`.
+- La repetición en el móvil real (T042) está registrada en la Fase 11.
+
+## Fase 11 · Prueba en móvil real con el bloqueo de introducción (T042, T032)
+
+**Fecha**: 2026-10-23 · dispositivo: Android, Chrome, con «quitar animaciones» activo (`prefers-reduced-motion`), hecha por el titular del proyecto.
+
+- **Resultado**: la forma en que el cráneo se abre y se cierra con el bloqueo de introducción es correcta; la sensibilidad actual (`DISTANCIA_TOQUE`, `DISTANCIA_RUEDA`, `BLOQUEO_VELOCIDAD`) se mantiene sin cambios.
+- **T032** queda sustituida por T042: el anclaje `sticky` y `--recorrido` ya no existen, así que no hay distancia que afinar.
+- **Seguimiento opcional (no bloquea el cierre de la spec)**: (a) probar en un teléfono sin «quitar animaciones» (modo 3D en móvil real); (b) Safari de iOS y Firefox: confirmar que cambiar el `media` de los `<source>` dispara la descarga del cráneo abierto (plan B: asignar `srcset` desde `js/principal.js`).
