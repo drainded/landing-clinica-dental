@@ -461,6 +461,155 @@
     return liberarParaSiempre;
   }
 
+  /**
+   * Hero estático con transición por scroll (specs/002-hero-estatico-scroll, contrato §5).
+   *
+   * Solo con html[data-transicion] (ahorro de datos o equipo lento, sin movimiento reducido): el hero queda
+   * anclado (CSS, position: sticky) durante un recorrido de scroll y esta función convierte la posición de scroll
+   * en --apertura (0–1), igual que el bloqueo de introducción lo hace en el modo 3D, de modo que el CSS funde el
+   * cráneo cerrado con el abierto y revela el eslogan y el botón. No intercepta ni bloquea el scroll nativo.
+   *
+   * apertura = acotar((scrollY − inicio) / D), con D = alto del hero − alto del escenario (la distancia que dura el
+   * anclaje) e inicio = el scroll en el que el escenario empieza a anclarse (0 en escritorio, donde el encabezado ya
+   * es fijo; el alto del encabezado en móvil, donde se va con el scroll).
+   * El valor mostrado se acerca al objetivo con el mismo suavizado exponencial del 3D, así que Fin, anclas o la
+   * inercia no producen saltos. Devuelve la función que la desactiva.
+   */
+  function controlarTransicionScroll(hero) {
+    var escenario = hero.querySelector(".hero__escenario");
+    if (!escenario || !document.documentElement.hasAttribute("data-transicion")) return function () {};
+
+    var distancia = 1;
+    var inicio = 0;
+    var objetivo = 0;
+    var mostrado = 0;
+    var publicado = -1;
+    var ultimo = 0;
+    var cuadro = 0;
+    var enPantalla = true;
+    var activo = true;
+
+    function acotar(x) { return Math.min(1, Math.max(0, x)); }
+
+    function publicar() {
+      if (Math.abs(mostrado - publicado) >= 0.0005) {
+        publicado = mostrado;
+        hero.style.setProperty("--apertura", mostrado.toFixed(3));
+      }
+      // Histéresis para que el botón no parpadee en el umbral
+      if (mostrado > UMBRAL_REVELADO_ON) hero.setAttribute("data-revelado", "");
+      else if (mostrado < UMBRAL_REVELADO_OFF) hero.removeAttribute("data-revelado");
+    }
+
+    function avanzar(t) {
+      cuadro = 0;
+      if (!activo) return;
+      var dt = Math.min((t - ultimo) / 1000, 0.1);
+      ultimo = t;
+      mostrado += (objetivo - mostrado) * (1 - Math.exp(-12 * dt));
+      if (Math.abs(objetivo - mostrado) < 0.0005) mostrado = objetivo;
+      publicar();
+      if (mostrado !== objetivo && enPantalla) cuadro = window.requestAnimationFrame(avanzar);
+    }
+
+    function agendar() {
+      if (cuadro || !enPantalla || !activo) return;
+      ultimo = performance.now();
+      cuadro = window.requestAnimationFrame(avanzar);
+    }
+
+    function medir() {
+      var arriba = parseFloat(window.getComputedStyle(escenario).top) || 0;   // donde se ancla el escenario
+      distancia = Math.max(1, hero.offsetHeight - escenario.offsetHeight);
+      inicio = hero.getBoundingClientRect().top + window.pageYOffset - arriba;
+      objetivo = acotar((window.pageYOffset - inicio) / distancia);
+    }
+
+    function alDesplazar() {
+      objetivo = acotar((window.pageYOffset - inicio) / distancia);
+      agendar();
+    }
+
+    function alCambiarTamano() {
+      medir();
+      agendar();
+    }
+
+    // Al cargar (recarga ya desplazada, ancla en la URL) se muestra directamente el estado que corresponde
+    medir();
+    mostrado = objetivo;
+    publicar();
+
+    window.addEventListener("scroll", alDesplazar, { passive: true });
+    var observadorTamano = window.ResizeObserver ? new window.ResizeObserver(alCambiarTamano) : null;
+    if (observadorTamano) { observadorTamano.observe(hero); observadorTamano.observe(escenario); }
+    var observadorVisible = window.IntersectionObserver ? new window.IntersectionObserver(function (entradas) {
+      enPantalla = entradas[entradas.length - 1].isIntersecting;
+      if (enPantalla) { medir(); agendar(); }
+    }) : null;
+    if (observadorVisible) observadorVisible.observe(hero);
+
+    return function detener() {
+      activo = false;
+      if (cuadro) { window.cancelAnimationFrame(cuadro); cuadro = 0; }
+      window.removeEventListener("scroll", alDesplazar);
+      if (observadorTamano) observadorTamano.disconnect();
+      if (observadorVisible) observadorVisible.disconnect();
+    };
+  }
+
+  /**
+   * Cráneo abierto del hero estático (contrato §1 y §5): el <img> de .hero__abierto arranca con un GIF vacío y sus
+   * <source> llevan un media que solo casa con movimiento reducido. Aquí se cambia ese media por el de data-media
+   * y el navegador elige y pide la imagen real. Cuándo (motivo): "transicion" → tras load y con el navegador libre
+   * (con ahorro de datos, en el primer scroll); "inmediato" → ya. Si la imagen real falla, data-abierto-fallo deja
+   * el póster cerrado con el eslogan y el botón siempre visibles. El onload del <img> marca data-abierto-listo.
+   */
+  var imagenAbiertaActivada = false;
+
+  function activarImagenAbierta(hero) {
+    if (imagenAbiertaActivada) return;
+    imagenAbiertaActivada = true;
+    var fuentes = hero.querySelectorAll(".hero__abierto source");
+    for (var i = 0; i < fuentes.length; i++) fuentes[i].media = fuentes[i].getAttribute("data-media") || "all";
+  }
+
+  function habilitarImagenAbierta(hero, motivo) {
+    var imagen = hero.querySelector(".hero__abierto img");
+    if (imagen && !imagen.getAttribute("data-vigilada")) {
+      imagen.setAttribute("data-vigilada", "");
+      imagen.addEventListener("error", function () {
+        if (imagen.currentSrc && imagen.currentSrc.slice(0, 5) !== "data:") {
+          document.documentElement.setAttribute("data-abierto-fallo", "");
+        }
+      });
+    }
+    function activar() { activarImagenAbierta(hero); }
+    function cuandoLibre() {
+      function libre() {
+        if (window.requestIdleCallback) window.requestIdleCallback(activar, { timeout: 4000 });
+        else window.setTimeout(activar, 200);
+      }
+      if (document.readyState === "complete") libre();
+      else window.addEventListener("load", libre, { once: true });
+    }
+    if (motivo === "inmediato") {
+      activar();
+    } else if (navigator.connection && navigator.connection.saveData) {
+      window.addEventListener("scroll", activar, { once: true, passive: true });
+    } else {
+      cuandoLibre();
+    }
+  }
+
+  /** Modo estático (sin 3D): con data-transicion el scroll gobierna la apertura; en el resto, composición final. */
+  function iniciarEstatico() {
+    var hero = document.getElementById("inicio");
+    if (!hero || !document.documentElement.hasAttribute("data-transicion")) return;
+    controlarTransicionScroll(hero);
+    habilitarImagenAbierta(hero, "transicion");
+  }
+
   function iniciarDentadura() {
     var raiz = document.documentElement;
     // Solo desarrollo (specs/002-hero-estatico-scroll, contrato §5): ?captura carga el 3D sin bloqueo ni espera
@@ -469,6 +618,7 @@
     if (captura) raiz.dataset.hero = "animado";
     if (raiz.dataset.hero !== "animado" || (!captura && esEquipoModesto())) {
       raiz.dataset.hero = "estatico";
+      iniciarEstatico();
       return;
     }
 

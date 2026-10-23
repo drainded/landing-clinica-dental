@@ -270,9 +270,31 @@ section { padding: var(--espacio-7) 0; }
   padding: 0;
   color: var(--color-texto);
   --apertura: 1;
+  /* t = smoothstep(apertura / 0,7): mismas curvas que el 3D (js/dentadura.js) para el fundido y la traslación */
+  --x: clamp(0, var(--apertura) / .7, 1);
+  --t: calc(var(--x) * var(--x) * (3 - 2 * var(--x)));
+  /* El póster cerrado solo desaparece cuando el cráneo abierto ya cargó (onload del <img> → data-abierto-listo) */
+  --listo: 0;
 }
+html[data-abierto-listo] .hero { --listo: 1; }
 html[data-hero="animado"] .hero,
 html[data-transicion] .hero { --apertura: 0; }
+/* Estático con transición: el hero se mantiene anclado mientras el scroll nativo avanza --apertura
+   (js/principal.js); --recorrido es la distancia de scroll de la transición (admitido 60–100 svh) */
+html[data-transicion] .hero {
+  --recorrido: 80svh;
+  background-color: var(--color-velo-fondo);   /* rellena la franja que deja el escenario anclado */
+}
+/* El escenario anclado solo se mueve dentro del contenido de su padre: el recorrido es un espaciador, no un padding */
+html[data-transicion] .hero::after {
+  content: "";
+  display: block;
+  height: var(--recorrido);
+}
+html[data-transicion] .hero__escenario {
+  position: sticky;
+  top: 0;
+}
 .hero__escenario {
   position: relative;
   isolation: isolate;
@@ -352,14 +374,47 @@ html[data-transicion] .hero { --apertura: 0; }
   aspect-ratio: 524 / 564;
   transform: translate(-50%, -50%);
 }
+.hero__poster-caja {
+  /* Recuadro del cráneo abierto y desplazamiento de la cámara (% del rectángulo del póster); salida de
+     referencias/herramientas/codificar-craneo.py, una por variante de imagen (< 1024 px y ≥ 1024 px) */
+  --abierto-izq: -.62%;
+  --abierto-arr: -11.96%;
+  --abierto-ancho: 103.47%;
+  --abierto-alto: 113.90%;
+  --despl-x: .85%;
+  --despl-y: -14.05%;
+}
 .hero__poster {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  /* Se funde con el abierto (--t) y acompaña la bajada de la cámara con la traslación t·Δ */
+  opacity: calc(1 - var(--t) * var(--listo));
+  transform: translate(calc(var(--despl-x) * var(--t)), calc(var(--despl-y) * var(--t)));
+}
+/* Cráneo abierto: la caja ocupa el póster (para que el % del translate sea del póster) y la imagen se coloca dentro */
+.hero__abierto {
+  position: absolute;
+  inset: 0;
+  display: block;
+  opacity: var(--t);
+  transform: translate(calc(var(--despl-x) * (var(--t) - 1)), calc(var(--despl-y) * (var(--t) - 1)));
+}
+.hero__abierto img {
+  position: absolute;
+  left: var(--abierto-izq);
+  top: var(--abierto-arr);
+  width: var(--abierto-ancho);
+  height: var(--abierto-alto);
+  max-width: none;
+}
+/* Con el 3D listo las imágenes se retiran con un fundido */
+.hero__figura.is-3d .hero__poster,
+.hero__figura.is-3d .hero__abierto {
+  opacity: 0;
   transition: opacity .35s ease;
 }
-.hero__figura.is-3d .hero__poster { opacity: 0; }
 /* Clic sobre el cráneo: abre/cierra la mandíbula (js/principal.js añade role="button") */
 .hero__figura[role="button"] { -webkit-tap-highlight-color: transparent; }
 /* El clic solo cuenta cerca del cráneo: el cursor de mano aparece únicamente ahí (js/principal.js) */
@@ -412,6 +467,8 @@ html[data-hero="animado"] .hero__servicios,
 html[data-transicion] .hero__servicios { pointer-events: none; }
 html[data-hero="animado"] #inicio[data-revelado] .hero__servicios,
 html[data-transicion] #inicio[data-revelado] .hero__servicios,
+html[data-hero="animado"] .hero__servicios:focus-visible,
+html[data-transicion] .hero__servicios:focus-visible,
 .hero__servicios:focus-visible {
   pointer-events: auto;
 }
@@ -458,6 +515,16 @@ html[data-transicion] #inicio[data-revelado] .hero__servicios,
   .hero__eslogan { max-width: 30ch; }
 }
 @media (min-width: 1024px) {
+  .hero__poster-caja {
+    --abierto-izq: .13%;
+    --abierto-arr: -12.80%;
+    --abierto-ancho: 102.07%;
+    --abierto-alto: 114.48%;
+    --despl-x: .86%;
+    --despl-y: -14.18%;
+  }
+  /* El encabezado es fijo: el escenario se ancla justo debajo */
+  html[data-transicion] .hero__escenario { top: var(--alto-header); }
   /* En escritorio la boca abierta es más baja: subir el grupo para ver los dientes de arriba y de abajo */
   .hero__revelado { padding-top: 5%; padding-bottom: 0; }
   .hero__eslogan { max-width: 40ch; }

@@ -400,10 +400,125 @@ async function comparar(base, o) {
   return fallos ? 1 : 0;
 }
 
+/* ---------- transicion: recorrido del scroll del hero estático ---------- */
+
+const ESTADO_HERO = `(() => {
+  const q = (s) => document.querySelector(s);
+  const cs = (e, p) => getComputedStyle(e)[p];
+  const hero = q('#inicio');
+  return { y: Math.round(scrollY), apertura: hero.style.getPropertyValue('--apertura'),
+    poster: cs(q('.hero__poster'), 'opacity'), abierto: cs(q('.hero__abierto'), 'opacity'),
+    eslogan: cs(q('.hero__eslogan'), 'opacity'), boton: cs(q('.hero__servicios'), 'opacity'),
+    clic: cs(q('.hero__servicios'), 'pointerEvents'), revelado: hero.hasAttribute('data-revelado'),
+    escenarioTop: Math.round(q('.hero__escenario').getBoundingClientRect().top),
+    heroBottom: Math.round(hero.getBoundingClientRect().bottom),
+    listo: document.documentElement.hasAttribute('data-abierto-listo'),
+    fallo: document.documentElement.hasAttribute('data-abierto-fallo'),
+    desborde: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    // «Agende su cita» visible en pantalla y no tapado por nada (el elemento bajo su centro es el propio botón)
+    contacto: (() => { const b = q('.hero__contacto .boton'); const r = b.getBoundingClientRect();
+      const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return r.top >= 0 && r.bottom <= innerHeight && !!el && (b === el || b.contains(el)); })() };
+})()`;
+
+/**
+ * Recorre el hero estático con el scroll: 0, 25, 50, 75 y 100 % del anclaje, un poco más allá (el hero se desancla)
+ * y la vuelta. Uso: transicion [--tamano 390x844] [--perfil ahorro-datos] [--depurar]
+ */
+async function transicion(base, o) {
+  const tamanos = o.tamano ? [String(o.tamano).split("x").map(Number)] : [[390, 844], [1440, 900]];
+  await mkdir(SALIDA_DEP, { recursive: true });
+  let fallos = 0;
+  for (const [ancho, alto] of tamanos) {
+    const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "ahorro-datos", chrome: o.chrome });
+    try {
+      await pagina.ir(base + "index.html");
+      await esperar(1500);
+      const geo = await pagina.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario');
+        return { recorrido: h.offsetHeight - e.offsetHeight, inicio: h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0) }; })()`);
+      const { recorrido, inicio } = geo;
+      console.log(`\n${ancho}×${alto} · recorrido ${recorrido}px (${(recorrido / alto * 100).toFixed(0)} % del alto) · modo: ${await pagina.evaluar("document.documentElement.dataset.hero + (document.documentElement.hasAttribute('data-transicion') ? '+transicion' : '')")}`);
+      console.log("  pos      scrollY  apertura  póster  abierto  eslogan  botón  clic   revelado  escenarioTop  listo");
+      // Rueda real: el scroll nativo no debe bloquearse
+      await pagina.cdp.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: ancho / 2, y: alto / 2, deltaX: 0, deltaY: 200 });
+      await esperar(1200);
+      const rueda = await pagina.evaluar("Math.round(scrollY)");
+      console.log(`  rueda: scrollY tras 200 px de rueda = ${rueda} ${rueda > 0 ? "(OK, no se bloquea)" : "(FALLA: el scroll quedó bloqueado)"}`);
+      if (!(rueda > 0)) fallos++;
+      for (const p of [0, 0.25, 0.5, 0.75, 1, 1.4, 0.5, 0]) {
+        await pagina.evaluar(`window.scrollTo({ top: ${Math.round(inicio + p * recorrido)}, behavior: 'instant' })`);
+        await esperar(1100);
+        const e = await pagina.evaluar(ESTADO_HERO);
+        console.log(`  ${(p * 100).toFixed(0).padStart(4)} %  ${String(e.y).padStart(7)}  ${String(e.apertura).padStart(8)}  ${Number(e.poster).toFixed(2).padStart(6)}  ${Number(e.abierto).toFixed(2).padStart(7)}  ${Number(e.eslogan).toFixed(2).padStart(7)}  ${Number(e.boton).toFixed(2).padStart(5)}  ${e.clic.padEnd(5)}  ${String(e.revelado).padEnd(8)}  ${String(e.escenarioTop).padStart(11)}  ${e.listo}${e.fallo ? " FALLO" : ""}${e.desborde ? " DESBORDE-HORIZONTAL" : ""}${e.contacto ? "" : " CONTACTO-TAPADO"}`);
+        if (e.desborde || !e.contacto) fallos++;
+        if (o.depurar) await writeFile(path.join(SALIDA_DEP, `transicion-${ancho}x${alto}-${Math.round(p * 100)}-${e.y}.png`), await pagina.pantalla());
+      }
+      if (o.extra) fallos += await extrasTransicion(pagina, ancho, alto, recorrido, inicio);
+    } finally {
+      await pagina.cerrar();
+    }
+  }
+  return fallos ? 1 : 0;
+}
+
+/** Recarga ya desplazada, regreso por #inicio, teclado (Tab hasta el botón) y cuadros por segundo del recorrido. */
+async function extrasTransicion(pagina, ancho, alto, recorrido, inicio) {
+  let fallos = 0;
+  const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
+  // Recarga ya desplazada: el estado corresponde a la posición, no al inicial
+  await pagina.evaluar(`window.scrollTo({ top: ${Math.round(inicio + recorrido * 0.4)}, behavior: 'instant' })`);
+  await esperar(500);
+  await pagina.cdp.send("Page.reload");
+  await esperar(2500);
+  const rec = await pagina.evaluar(ESTADO_HERO);
+  ok(Math.abs(Number(rec.apertura) - 0.4) < 0.05 && rec.y > 0, `recarga desplazada: scrollY ${rec.y}, apertura ${rec.apertura} (esperado ≈ 0,40)`);
+  // Regreso por #inicio con la transición completada
+  await pagina.evaluar(`window.scrollTo({ top: ${Math.round(inicio + recorrido * 1.4)}, behavior: 'instant' })`);
+  await esperar(600);
+  await pagina.evaluar("location.hash = '#inicio'");
+  await esperar(2500);
+  const ini = await pagina.evaluar(ESTADO_HERO);
+  ok(Number(ini.apertura) === 0 && Number(ini.poster) === 1, `regreso por #inicio: scrollY ${ini.y}, apertura ${ini.apertura}, póster ${ini.poster}`);
+  // Teclado: Tab hasta «Conoce nuestros servicios» con la boca cerrada; debe verse con foco
+  let enBoton = false;
+  for (let i = 0; i < 25 && !enBoton; i++) {
+    await pagina.cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    await pagina.cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    enBoton = await pagina.evaluar("document.activeElement && document.activeElement.classList.contains('hero__servicios')");
+  }
+  await esperar(300);
+  const foco = await pagina.evaluar(`(() => { const b = document.querySelector('.hero__servicios'); const r = b.getBoundingClientRect();
+    return { opacidad: +getComputedStyle(b).opacity, clic: getComputedStyle(b).pointerEvents, ancho: r.width, alto: r.height, apertura: document.getElementById('inicio').style.getPropertyValue('--apertura') }; })()`);
+  ok(enBoton && foco.opacidad === 1 && foco.clic === "auto" && foco.alto >= 44, `Tab llega al botón con apertura ${foco.apertura}: opacidad ${foco.opacidad}, clic ${foco.clic}, alto ${Math.round(foco.alto)} px`);
+  // Cuadros por segundo durante un recorrido completo con gesto de scroll real (en software: cifra orientativa)
+  await pagina.evaluar("window.scrollTo({ top: 0, behavior: 'instant' }); window.__dt = []; (function f(t){ if (window.__ult) window.__dt.push(t - window.__ult); window.__ult = t; window.__raf = requestAnimationFrame(f); })(performance.now())");
+  await esperar(300);
+  await pagina.cdp.send("Input.synthesizeScrollGesture", { x: Math.round(ancho / 2), y: Math.round(alto / 2), yDistance: -Math.round(inicio + recorrido * 1.2), speed: 600, gestureSourceType: "mouse" });
+  await esperar(500);
+  const dt = await pagina.evaluar("cancelAnimationFrame(window.__raf), window.__dt");
+  const medio = dt.reduce((a, b) => a + b, 0) / Math.max(1, dt.length);
+  const peor = Math.max(...dt);
+  console.log(`  INFO  cuadros durante el recorrido: ${dt.length} · ${(1000 / medio).toFixed(0)} fps de media · cuadro más largo ${peor.toFixed(0)} ms (Chrome sin interfaz, render por software)`);
+  return fallos;
+}
+
+/** Utilidad de depuración: evalúa una expresión en la página. Uso: evaluar --tamano 390x844 --js "expresión" [--perfil p] [--ir ruta] */
+async function evaluar(base, o) {
+  const [ancho, alto] = String(o.tamano || "1440x900").split("x").map(Number);
+  const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "normal", chrome: o.chrome });
+  try {
+    await pagina.ir(base + (o.ir || "index.html"));
+    await esperar(1500);
+    console.log(JSON.stringify(await pagina.evaluar(String(o.js)), null, 2));
+  } finally {
+    await pagina.cerrar();
+  }
+}
+
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla, comparar };
+const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);

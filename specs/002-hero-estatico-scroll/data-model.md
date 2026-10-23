@@ -42,12 +42,14 @@ carga ──► 3D ──(fallo / contexto perdido / reducir movimiento en vivo)
 ## 3. Cálculo de `apertura` en modo `scroll`
 
 ```
-D        = hero.offsetHeight − escenario.offsetHeight      (px de recorrido anclado)
-objetivo = clamp(scrollY / D, 0, 1)
+D        = hero.offsetHeight − escenario.offsetHeight      (px de recorrido anclado; el espaciador .hero::after)
+inicio   = hero.top + scrollY − top_sticky                  (scroll en el que el escenario empieza a anclarse:
+                                                             ≈ 0 en escritorio; el alto del encabezado en móvil)
+objetivo = clamp((scrollY − inicio) / D, 0, 1)
 mostrado ← mostrado + (objetivo − mostrado) · (1 − e^(−12·dt))     (cada cuadro, mientras |dif| > 0,0005)
 ```
 
-Con `scrollY` = 0 → cerrado; con `scrollY ≥ D` → abierto y el hero se desancla.
+Con `scrollY ≤ inicio` → cerrado (también al volver a `#inicio`); con `scrollY ≥ inicio + D` → abierto y el hero se desancla. El espaciador es un elemento dentro del hero (no un `padding`) porque `position: sticky` solo se mueve dentro del contenido de su padre.
 
 ## 4. Imágenes del hero
 

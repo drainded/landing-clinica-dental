@@ -63,7 +63,7 @@ Valor por defecto de `--apertura` en CSS: `0` con `html[data-hero="animado"]` o 
 
 1. **Disposición única**: `html[data-hero="animado"]` deja de condicionar la rejilla; la figura es `height: auto`, el escenario mide `calc(100svh − barra − encabezado)` y `.hero__revelado` se superpone a la figura (`grid-row: 2`), como en el 3D. La disposición antigua (altura `min(56svh, 32rem)` y eslogan debajo) se elimina.
 2. **Fundido**: `.hero__poster { opacity: calc(1 − var(--t) * var(--listo)); transform: translate(calc(var(--despl-x) * var(--t)), calc(var(--despl-y) * var(--t))); }` y `.hero__abierto { opacity: var(--t); transform: translate(calc(var(--despl-x) * (var(--t) − 1)), calc(var(--despl-y) * (var(--t) − 1))); }`. Solo `opacity` y `transform`. El póster conserva su `transition: opacity` para que el relevo sea suave.
-3. **Anclaje**: `html[data-transicion] .hero { padding-bottom: var(--recorrido); }` y `html[data-transicion] .hero__escenario { position: sticky; top: 0; }` (`top: var(--alto-header)` desde 1024 px).
+3. **Anclaje**: `html[data-transicion] .hero::after { content: ""; display: block; height: var(--recorrido); }` (espaciador dentro del hero: `sticky` solo se mueve dentro del contenido de su padre, no del padding) y `html[data-transicion] .hero__escenario { position: sticky; top: 0; }` (`top: var(--alto-header)` desde 1024 px).
 4. **Móvil apaisado bajo** (`(orientation: landscape) and (max-height: 500px)`): sin anclaje ni recorrido; `--apertura: 1`.
 5. **Movimiento reducido**: `@media (prefers-reduced-motion: reduce)` → `--apertura: 1`, sin `transition` en el hero ni anclaje.
 6. **Con 3D listo** (`.hero__figura.is-3d`): póster e imagen abierta con `opacity: 0` (como hoy el póster).
