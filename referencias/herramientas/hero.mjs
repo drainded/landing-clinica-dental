@@ -112,7 +112,7 @@ const SCRIPT_PERFIL = {
 };
 
 /** Lanza Chrome, abre una pestaña con el tamaño y el perfil pedidos y devuelve utilidades para controlarla. */
-async function abrirPagina({ ancho, alto, perfil = "normal", chrome }) {
+async function abrirPagina({ ancho, alto, perfil = "normal", chrome, movil = false }) {
   const ejecutable = chrome || process.env.CHROME || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
   const puerto = 9300 + Math.floor(Math.random() * 600);
   const carpeta = path.join(PERFILES_CHROME, String(process.pid) + "-" + puerto);
@@ -135,7 +135,8 @@ async function abrirPagina({ ancho, alto, perfil = "normal", chrome }) {
   await cdp.send("Runtime.enable");
   await cdp.send("Network.enable");
   await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
-  await cdp.send("Emulation.setDeviceMetricsOverride", { width: ancho, height: alto, deviceScaleFactor: 1, mobile: false });
+  await cdp.send("Emulation.setDeviceMetricsOverride", { width: ancho, height: alto, deviceScaleFactor: movil ? 2 : 1, mobile: !!movil });
+  if (movil) await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
   if (perfil === "movimiento-reducido") {
     await cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   }
@@ -150,6 +151,7 @@ async function abrirPagina({ ancho, alto, perfil = "normal", chrome }) {
 
   const api = {
     cdp,
+    movil,
     peticiones,
     recursos: () => [...porId.values()],
     async ir(url) {
@@ -433,7 +435,7 @@ async function transicion(base, o) {
   await mkdir(SALIDA_DEP, { recursive: true });
   let fallos = 0;
   for (const [ancho, alto] of tamanos) {
-    const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "ahorro-datos", chrome: o.chrome });
+    const pagina = await abrirPagina({ ancho, alto, perfil: o.perfil || "ahorro-datos", chrome: o.chrome, movil: !!o.movil });
     try {
       await pagina.ir(base + "index.html");
       await esperar(1500);
@@ -496,7 +498,7 @@ async function extrasTransicion(pagina, ancho, alto, recorrido, inicio) {
   // Cuadros por segundo durante un recorrido completo con gesto de scroll real (en software: cifra orientativa)
   await pagina.evaluar("window.scrollTo({ top: 0, behavior: 'instant' }); window.__dt = []; (function f(t){ if (window.__ult) window.__dt.push(t - window.__ult); window.__ult = t; window.__raf = requestAnimationFrame(f); })(performance.now())");
   await esperar(300);
-  await pagina.cdp.send("Input.synthesizeScrollGesture", { x: Math.round(ancho / 2), y: Math.round(alto / 2), yDistance: -Math.round(inicio + recorrido * 1.2), speed: 600, gestureSourceType: "mouse" });
+  await pagina.cdp.send("Input.synthesizeScrollGesture", { x: Math.round(ancho / 2), y: Math.round(alto / 2), yDistance: -Math.round(inicio + recorrido * 1.2), speed: 600, gestureSourceType: pagina.movil ? "touch" : "mouse" });
   await esperar(500);
   const dt = await pagina.evaluar("cancelAnimationFrame(window.__raf), window.__dt");
   const medio = dt.reduce((a, b) => a + b, 0) / Math.max(1, dt.length);
@@ -699,6 +701,67 @@ async function relevo(base, o) {
   return fallos ? 1 : 0;
 }
 
+/**
+ * Gestos táctiles reales en emulación móvil (deviceScaleFactor 2, toques): con el 3D (bloqueo de introducción: el primer
+ * gesto abre la mandíbula sin desplazar la página y el siguiente la desplaza) y con el modo estático (el scroll nativo
+ * recorre la transición). Uso: tactil [--tamano 390x844]
+ */
+async function tactil(base, o) {
+  let fallos = 0;
+  const ok = (cond, texto) => { console.log(`  ${cond ? "OK   " : "FALLA"} ${texto}`); if (!cond) fallos++; };
+  const [ancho, alto] = String(o.tamano || "390x844").split("x").map(Number);
+  // Deslizamiento de un dedo hacia arriba (desplaza la página hacia abajo): toque, 12 movimientos y fin del toque
+  const gesto = async (p, dy, ms = 360) => {
+    const x = Math.round(ancho / 2);
+    const y0 = Math.round(alto * 0.75);
+    await p.cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: y0, id: 1 }] });
+    for (let i = 1; i <= 12; i++) {
+      await esperar(ms / 12);
+      await p.cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: Math.round(y0 - (dy * i) / 12), id: 1 }] });
+    }
+    await p.cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  };
+  console.log(`${ancho}×${alto} · emulación móvil con toques`);
+
+  let p = await abrirPagina({ ancho, alto, perfil: "normal", chrome: o.chrome, movil: true });
+  try {
+    await p.ir(base + "index.html");
+    await p.esperarHasta("!!document.querySelector('.hero__canvas.is-listo')", 120000);
+    await esperar(800);
+    const ini = await p.evaluar(ESTADO_MODOS);
+    ok(ini.is3d && ini.hero === "animado", "3D en móvil (modelo ligero) listo");
+    await gesto(p, 300);   // menos que el recorrido completo (≈ 506 px): abre a medias sin liberar el bloqueo
+    await esperar(2200);
+    const a = await p.evaluar("({ y: Math.round(scrollY), apertura: document.getElementById('inicio').style.getPropertyValue('--apertura'), bloqueo: document.documentElement.hasAttribute('data-bloqueo') })");
+    // Con render por software el hilo principal va lento: Chrome puede empezar a desplazar unos píxeles antes de que el
+    // bloqueo cancele el gesto (en móvil real el desplazamiento es 0). La inercia del toque (IMPULSO_TOQUE_MS) puede completar la apertura.
+    ok(a.y <= 60 && Number(a.apertura) > 0.3, `primer gesto táctil: la mandíbula se abre y la página casi no se desplaza (scrollY ${a.y} ≤ 60, apertura ${a.apertura})`);
+    await gesto(p, 500);
+    await esperar(1500);
+    await gesto(p, 500);
+    await esperar(2000);
+    const b = await p.evaluar("({ y: Math.round(scrollY), apertura: document.getElementById('inicio').style.getPropertyValue('--apertura'), bloqueo: document.documentElement.hasAttribute('data-bloqueo') })");
+    ok(b.y > 0 && !b.bloqueo, `con la apertura completa el bloqueo se libera y el siguiente gesto desplaza la página (scrollY ${b.y}, apertura ${b.apertura})`);
+  } finally { await p.cerrar(); }
+
+  p = await abrirPagina({ ancho, alto, perfil: "ahorro-datos", chrome: o.chrome, movil: true });
+  try {
+    await p.ir(base + "index.html");
+    await esperar(1500);
+    const geo = await p.evaluar(`(() => { const h = document.getElementById('inicio'), e = h.querySelector('.hero__escenario'); return { recorrido: h.offsetHeight - e.offsetHeight, inicio: h.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(e).top) || 0) }; })()`);
+    const lecturas = [];
+    for (let i = 0; i < 6; i++) {
+      await gesto(p, 160, 300);
+      await esperar(700);
+      lecturas.push(await p.evaluar("({ y: Math.round(scrollY), apertura: +document.getElementById('inicio').style.getPropertyValue('--apertura'), top: Math.round(document.querySelector('.hero__escenario').getBoundingClientRect().top) })"));
+    }
+    console.log("  INFO  scrollY / apertura / escenarioTop:", lecturas.map((l) => `${l.y}/${l.apertura.toFixed(2)}/${l.top}`).join("  "));
+    const crece = lecturas.every((l, i) => i === 0 || l.y >= lecturas[i - 1].y);
+    ok(crece && lecturas.some((l) => l.apertura > 0.9) && lecturas.slice(0, 4).every((l) => l.top <= 0 && l.top >= -1), "estático con toques: la transición avanza con el scroll táctil y el hero permanece anclado");
+  } finally { await p.cerrar(); }
+  return fallos ? 1 : 0;
+}
+
 /** Utilidad de depuración: evalúa una expresión en la página. Uso: evaluar --tamano 390x844 --js "expresión" [--perfil p] [--ir ruta] */
 async function evaluar(base, o) {
   const [ancho, alto] = String(o.tamano || "1440x900").split("x").map(Number);
@@ -715,7 +778,7 @@ async function evaluar(base, o) {
 /* ---------- Principal ---------- */
 
 const { comando, opciones } = leerArgumentos(process.argv.slice(2));
-const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red, modos, relevo };
+const COMANDOS = { capturar, cajas, pantalla, comparar, transicion, evaluar, red, modos, relevo, tactil };
 if (!COMANDOS[comando]) {
   console.error("Uso: hero.mjs capturar|cajas|pantalla|comparar [opciones]  (ver el encabezado del archivo)");
   process.exit(2);

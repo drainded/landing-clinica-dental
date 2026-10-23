@@ -119,3 +119,26 @@ Registro de resultados (principio IX). Guía: [quickstart.md](quickstart.md). He
 **Lighthouse móvil, modo 3D**: no es evaluable en este entorno. Con WebGL por software el Total Blocking Time (compilar shaders y dibujar en CPU) hace oscilar el resultado entre 35 y 69 **también en la versión anterior** (68, 39 y 38 en tres ejecuciones; la actual 35, 69 y 40): es ruido del entorno, no una regresión. Queda para la prueba en móvil real (T032).
 
 **Comprobación entre navegadores del cambio dinámico de `media` en los `<source>`**: verificada en Chrome (en los modos diferidos la imagen real solo se pide tras `habilitarImagenAbierta`, y al cambiar el `media` se pide). **Pendiente**: Firefox y Safari (no disponibles en este equipo; el comportamiento está definido por la especificación de HTML —cambiar el `media` de un `<source>` vuelve a seleccionar la imagen—). Si alguno no la pidiera, plan B del contrato: asignar `srcset` desde `js/principal.js`. Se incluye en la prueba en móvil real (Safari de iOS).
+
+## Fase 8 · Emulación móvil con toques y cierre (T032 parcial, T033)
+
+**Fecha**: 2026-10-22 · batería final completa tras el último cambio de código (`hero.mjs comparar`, `transicion`, `modos`, `relevo`, `tactil`, `cajas`).
+
+- **Posición idéntica al 3D** (seis tamaños, fases 0 y 1): silueta ≤ 1,71 % (fase 0) y ≤ 0,74 % (fase 1) del ancho del póster; cajas de texto 0 px. **Recorrido por scroll**, **modos** (movimiento reducido, activarlo en vivo, imagen abierta bloqueada, `.glb` bloqueado, pérdida de contexto WebGL) y **relevo al 3D** (red limitada): todos en OK en 390 × 844 y 1440 × 900; sin desborde horizontal ni contacto tapado en los seis tamaños; CLS 0 en los seis tamaños.
+- **Emulación móvil con toques reales** (`hero.mjs tactil`, 390 × 844, deviceScaleFactor 2, modelo ligero): en el 3D, el primer gesto abre la mandíbula sin desplazar la página y, con la apertura completa, el siguiente gesto la desplaza (bloqueo de introducción intacto); en el modo estático, el scroll táctil recorre la transición con el hero anclado (scrollY 145 → 870, apertura 0,10 → 1,00). En una ejecución previa, con el hilo principal saturado por el render por software, Chrome desplazó 25 px antes de que el bloqueo cancelara el gesto: es una limitación del entorno, por eso la prueba en móvil real sigue pendiente.
+- **Regresión del 3D** (captura normal frente a `linea-base/`, 390 × 844 y 1440 × 900, fases 0 y 1): sin diferencias en cráneo, textos ni difuminado; solo cambian los hilos animados de los velos (dependen del tiempo) y píxeles sueltos de borde.
+- **Limpieza**: sin colores literales fuera de `:root` ni en el JS del sitio; sin reglas CSS de la disposición estática antigua; tokens sin uso heredados de antes de esta feature (`--color-overlay`, `--espacio-5`, `--espacio-8`) se dejan como estaban; `/referencias/*` redirige a 404 en `netlify.toml`; todo lo de `assets/img/` lo usa el sitio.
+
+### Revisión de los nueve principios
+
+| # | Principio | Resultado |
+|---|---|---|
+| I | Identidad y contenido | ✅ colores solo desde tokens (los fondos son activos generados con la paleta); datos del negocio y eslogan sin cambios |
+| II | Contacto primero | ✅ scroll nativo en el modo estático (anclaje `sticky`, sin interceptar eventos); «Agende su cita» visible y sin tapar en todo el recorrido; barra fija y botón flotante intactos |
+| III | Peso | ✅ crítica ≈ 140–175 KB (límite 500 KB); fondos 32/22 KB; cráneos 29–36 KB; 0 dominios externos; CLS ≈ 0; LCP 2,4 s (simulado, 4G lenta) |
+| IV | Dependencias | ✅ ninguna nueva en el sitio; herramientas de desarrollo (Node sin paquetes, Python/Pillow) fuera de la publicación |
+| V | Modelo 3D | ✅ el 3D no cambia; imágenes ≤ 60 KB generadas desde el modelo; constitución enmendada a v2.4.0 |
+| VI | Adaptación al dispositivo | ✅ cuatro modos con degradación a la composición final; movimiento reducido sin animación |
+| VII | Rendimiento en ejecución | ✅ solo `opacity`/`transform`; un `scroll` pasivo con rAF que se detiene al llegar al objetivo o salir de pantalla |
+| VIII | Accesibilidad y responsive | ✅ Lighthouse accesibilidad 100; contraste ≥ 4,5 : 1 medido en los seis tamaños; Tab llega al botón; imágenes decorativas; sin desborde en 360–1920 px (a 195 px desborda el documento por el encabezado y las tarjetas, anterior a esta feature) |
+| IX | Verificación | ⚠️ **pendiente la prueba en móvil real** (T032): inercia real, barra de direcciones y Safari de iOS / Firefox para el cambio dinámico de `media` en los `<source>` |
