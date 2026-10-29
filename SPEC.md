@@ -1,6 +1,6 @@
-# Spec-Driven Development — Landing Clínica Dental Dr. Héctor Manuel Rojas Pérez
+# Spec — Landing Clínica Dental Dr. Héctor Manuel Rojas Pérez
 
-**Versión:** 1.0 · **Fecha:** 2026-09-08 · **Estado:** especificación aprobada, pendiente de implementación
+**Versión:** 1.0 · **Fecha:** 2026-09-08 · **Estado:** especificación aprobada e implementada
 
 ---
 
@@ -8,11 +8,11 @@
 
 ### 1.1 El negocio
 
-Clínica Dental Dr. Héctor Manuel Rojas Pérez, ubicada en Atlacomulco, Estado de México (coordenadas `19.7975627, -99.8719214`). Es un consultorio local que atiende pacientes de la zona y hoy no tiene presencia web propia.
+Clínica Dental Dr. Héctor Manuel Rojas Pérez, ubicada en Atlacomulco, Estado de México (coordenadas `19.7975627, -99.8719214`). Es un consultorio local que atiende pacientes de la zona y hoy tiene presencia web propia.
 
 ### 1.2 El problema
 
-Los pacientes potenciales de la zona no tienen forma de conocer los servicios de la clínica ni de comprobar que es un lugar serio y limpio antes de acudir. Además existe otra clínica en la zona con una imagen digital más profesional, lo que desvía pacientes que comparan antes de decidir.
+Los pacientes potenciales de la zona ya tienen forma de conocer los servicios de la clínica y de comprobar que es un lugar serio y limpio antes de acudir, pero la estetica del sitio web es muy simple y puede mejorarse. Además existe otra clínica en la zona con una imagen digital más profesional, lo que desvía pacientes que comparan antes de decidir.
 
 ### 1.3 Objetivo del proyecto
 
@@ -31,7 +31,7 @@ Pacientes de Atlacomulco y alrededores, mayoritariamente en teléfono móvil, co
 ### 2.1 Dentro del alcance
 
 - Una única página HTML estática, responsive, mobile-first, en español de México.
-- Siete bloques de contenido: hero con slider, servicios, sobre el doctor, galería, reseñas, footer con mapa y horarios, más los elementos fijos de contacto.
+- Siete bloques de contenido: hero con cráneo 3D en rayos X sobre velos de luz interactivos, servicios, sobre el doctor, galería, reseñas, footer con mapa y horarios, más los elementos fijos de contacto.
 - Contacto por WhatsApp y por llamada telefónica.
 - Base mínima de SEO local y de compartición en redes (ver sección 10.4).
 - Despliegue en Netlify o Cloudflare Pages.
@@ -59,7 +59,7 @@ Estos puntos se excluyen de forma explícita. No son olvidos: se decidieron y se
 
 | ID | Requisito |
 |---|---|
-| RF-01 | La página muestra el nombre de la clínica, su eslogan y su ubicación en el primer pantallazo. |
+| RF-01 | La página muestra el nombre de la clínica y su ubicación en el primer pantallazo; el eslogan y el botón «Servicios» aparecen al abrirse la mandíbula de la dentadura, y siempre visibles si el 3D no se muestra (D-15). |
 | RF-02 | El teléfono es pulsable (`tel:`) desde cualquier punto de la página. |
 | RF-03 | Existe un acceso a WhatsApp permanentemente visible, con mensaje inicial prellenado. |
 | RF-04 | Se listan los servicios de la clínica con un ícono y una descripción breve cada uno. |
@@ -68,7 +68,7 @@ Estos puntos se excluyen de forma explícita. No son olvidos: se decidieron y se
 | RF-07 | Se muestran reseñas reales de pacientes; si no hay reseñas, la sección no se renderiza. |
 | RF-08 | El footer muestra la dirección, un mapa que enlaza a la navegación, y el horario completo. |
 | RF-09 | El hero muestra un resumen del horario en una línea. |
-| RF-10 | Las imágenes del hero rotan automáticamente con transición de fundido. |
+| RF-10 | ~~Las imágenes del hero rotan automáticamente~~ Sustituido por la dentadura 3D interactiva del hero (D-15; ver `specs/001-dentadura-3d-hero/`). |
 | RF-11 | En escritorio hay navegación por anclas a las secciones principales. |
 
 ### 3.2 Requisitos no funcionales
@@ -76,7 +76,7 @@ Estos puntos se excluyen de forma explícita. No son olvidos: se decidieron y se
 | ID | Requisito |
 |---|---|
 | RNF-01 | Mobile-first: el diseño se construye desde 360 px de ancho hacia arriba. |
-| RNF-02 | Sin frameworks ni librerías externas de JS o CSS. |
+| RNF-02 | Sin frameworks de JS o CSS. Solo se admiten las librerías de animación y 3D necesarias (GSAP, ScrollTrigger, Lenis, Three.js o su alternativa ligera aprobada en el plan), descargadas en `assets/js/vendor/` con su versión y licencia registradas; nunca desde un CDN ni como script de terceros (ver D-14). |
 | RNF-03 | Sin scripts de terceros ni cookies, por lo que no se requiere banner de consentimiento. |
 | RNF-04 | Todos los colores y tipografías viven en variables CSS en un único bloque. |
 | RNF-05 | Todos los datos del negocio viven en un único bloque de constantes. |
@@ -91,25 +91,26 @@ Orden vertical de la página: **Hero → Servicios → Sobre el doctor → Galer
 
 ### 4.1 Header
 
-- **Móvil (< 1024 px):** logo a la izquierda, botón «Llamar» a la derecha. Sin menú hamburguesa. Header no fijo.
+- **Móvil (< 1024 px):** logo a la izquierda y, a la derecha, el botón «Menú» que despliega las secciones de la página (*Servicios · El doctor · Galería · Reseñas · Ubicación*; D-24, que sustituye a D-08). Ya no hay botón «Llamar» en el header: «Llamar» sigue en la barra fija inferior (§4.8). Header no fijo.
 - **Escritorio (≥ 1024 px):** logo a la izquierda; en el centro, anclas a *Servicios · El doctor · Galería · Reseñas · Ubicación*; a la derecha, el teléfono visible y pulsable. Header fijo al hacer scroll, con fondo sólido para mantener la legibilidad.
 
 ### 4.2 Hero
 
-Sección a pantalla completa con el slider de fotografías al fondo y una capa oscura encima que garantiza el contraste del texto sea cual sea la fotografía.
+Sección a pantalla completa con un **fondo de velos de luz** translúcidos y entrelazados (tonos de los tokens `--color-velo-*`) que se mueven con el cursor, sin slider ni capa oscura, y el **cráneo inferior 3D con aspecto de radiografía** centrado (D-17). Spec: `specs/001-dentadura-3d-hero/`.
 
-Orden de los elementos, de arriba abajo:
+Elementos del hero:
 
 1. Logo de la clínica.
-2. `<h1>`: «Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco».
-3. Eslogan: **«La confianza en tu sonrisa comienza aquí»**, tipográficamente el elemento más grande del hero.
-4. Botón principal: **«Agende su cita»**, que abre WhatsApp.
-5. Teléfono pulsable, en tamaño menor que el botón.
-6. Línea de horario resumido: «Lun–Vie 9:00–19:00 · Sáb 9:00–14:00».
+2. `<h1>`: «Clínica Dental Dr. Héctor Manuel Rojas Pérez — Atlacomulco» (texto oscuro, siempre en el DOM).
+3. Cráneo 3D en rayos X, con la mandíbula cerrada al cargar. El cráneo arranca ya acercado; las primeras acciones de scroll no desplazan la página sino que abren la mandíbula (≈ 30°, ≥ 2 s aunque el gesto sea largo) y difuminan la parte del modelo que choca con los textos; después la página sigue con normalidad (D-18). Con el cursor/toque los velos del fondo se mueven y el cráneo se inclina.
+4. Eslogan: **«La confianza en tu sonrisa comienza aquí»** y botón **«Conoce nuestros servicios»** (ancla a §4.3), juntos en el hueco de la boca abierta: se revelan cuando la mandíbula está abierta. Sin 3D (ahorro de datos, equipo lento, `prefers-reduced-motion`, sin WebGL) aparecen poco a poco con la apertura del cráneo (bloqueo de introducción: D-18, D-21).
+5. Botón principal **«Agende su cita»** (WhatsApp), teléfono pulsable y línea de horario resumido «Lun–Vie 9:00–19:00 · Sáb 9:00–14:00»: se mantienen visibles desde el inicio (principio II).
 
-La jerarquía visual y la semántica no coinciden a propósito: el `<h1>` contiene nombre y ciudad porque es lo que se busca en Google y lo que se muestra al compartir el enlace, mientras que el eslogan domina visualmente porque es lo que genera la conexión con el paciente.
+El `<h1>` contiene nombre y ciudad por SEO y compartición; el eslogan es lo que genera la conexión con el paciente y domina visualmente cuando aparece.
 
-**Slider:** 3 imágenes, transición de fundido cada 6 segundos, sin flechas, con tres puntos indicadores discretos y pulsables. Se pausa al pasar el cursor por encima. Se desactiva por completo —quedando una imagen fija— si el navegador solicita `prefers-reduced-motion` o si solo hay una imagen disponible. La primera imagen se carga con prioridad; las otras dos, en diferido.
+**Respaldo (hero estático, D-19):** misma composición que el 3D con imágenes: cráneo cerrado (`assets/img/craneo-cerrado.webp`, es el LCP) y cráneo abierto (`assets/img/craneo-abierto-movil.webp` y `craneo-abierto-escritorio.webp`), con los dientes en una capa aparte y opaca (`*-dientes.webp`, D-22), generados desde el modelo 3D, sobre un fondo de imagen con versión para PC y para móvil (`fondo-hero-pc.webp`, `fondo-hero-movil.webp`). Los dos modos (3D e imágenes, este último también con `prefers-reduced-motion`; D-20) usan el mismo bloqueo de introducción: las primeras acciones de scroll abren el cráneo y el eslogan y el botón aparecen con opacidad creciente (D-21). Spec: `specs/002-hero-estatico-scroll/`. El slider de 3 fotos se retira (D-15).
+
+---
 
 ### 4.3 Servicios
 
@@ -161,29 +162,31 @@ El mismo texto prellenado en todos los botones. No es instrumentación: solo le 
 
 ### 5.1 Tokens de color
 
-Los colores actuales son un punto de partida y **se espera que cambien** cuando el cliente entregue su logo definitivo. Por eso ningún color puede aparecer escrito directamente en una regla CSS: todos se declaran una sola vez en `:root`.
+Ningún color puede aparecer escrito directamente en una regla CSS: todos se declaran una sola vez en `:root`. La paleta fue rediseñada por la spec 003 (D-23).
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-fondo` | `#F5EFE6` | Fondo general (beige) |
-| `--color-superficie` | `#FFFFFF` | Tarjetas y bloques elevados |
-| `--color-texto` | `#2C2C2C` | Texto principal |
-| `--color-texto-suave` | `#5A5A5A` | Texto secundario |
-| `--color-acento` | `#0F6E6E` | Botones, enlaces, íconos |
-| `--color-acento-oscuro` | `#0B5252` | Estado hover/active del acento |
-| `--color-whatsapp` | `#25D366` | Exclusivo de los botones de WhatsApp |
-| `--color-overlay` | `rgba(0,0,0,.45)` | Capa oscura del hero |
+| `--azul-50` … `--azul-950` | `#E6F2FF #B8DBFF #8AC4FF #5CADFF #2E96FF #0080FF #0069D1 #0052A3 #003B75 #002347 #000D1A` | Escala de azules de la marca |
+| `--color-gris` | `#1A1D21` | Fondo de doctor, consultorio y reseñas; tarjetas de servicio |
+| `--color-gris-claro` | `#262B31` | Bordes y superficies sobre el gris |
+| `--color-blanco` | `#FFFFFF` | Ubicación y pie |
+| `--color-dorado` | `#F5C451` | Estrellas de reseñas |
+| `--color-texto-oscuro` / `--color-texto-claro` | `#00050A` / `#FFFFFF` | Texto sobre fondos claros / oscuros |
+| `--color-acento` / `-oscuro` / `-claro` | `--azul-600` / `--azul-800` / `--azul-300` | Botones, enlaces, íconos |
+| `--color-header` / `--color-header-vidrio` | `--azul-950` / `--azul-950` al 60 % | Header oscuro y translúcido |
+| `--color-whatsapp` | `#11803D` | Exclusivo de los botones de WhatsApp |
+| `--color-velo-*`, `--color-rayosx*` | sin cambios | Hero 3D |
 
-El verde azulado del acento se eligió porque contrasta con el beige sin competir con él y por su asociación con salud e higiene. El verde de WhatsApp se mantiene tal cual porque el usuario lo reconoce como marca.
+El fondo de la página cambia de forma continua con el scroll (`--fondo`, `--texto`, `--texto-suave`, escritas por `js/principal.js` a partir de estos tokens). El verde de WhatsApp se mantiene tal cual porque el usuario lo reconoce como marca.
 
 ### 5.2 Tipografía
 
 | Token | Valor |
 |---|---|
-| `--fuente-titulos` | `'Poppins', system-ui, sans-serif` |
+| `--fuente-titulos` | `'Playfair Display', Georgia, serif` |
 | `--fuente-texto` | `'Inter', system-ui, sans-serif` |
 
-Se cargan desde Google Fonts únicamente los pesos necesarios (Poppins 600/700, Inter 400/500), con `preconnect` y `display=swap`. Si en la fase de pulido el coste de red no lo justifica, se sustituyen por la pila del sistema; la decisión quedaría registrada en la sección 11.
+Se autoalojan en WOFF2 en `assets/fonts/` únicamente los pesos necesarios (Playfair Display variable, Poppins 600/700 si se siguen usando, Inter 400/500), con `display=swap` y sin peticiones a Google Fonts (D-16, D-23).
 
 ### 5.3 Escala y espaciado
 
@@ -212,7 +215,7 @@ Se cargan desde Google Fonts únicamente los pesos necesarios (Poppins 600/700, 
 | D-05 | Reseñas estáticas, no widget de Google | Evita script de terceros, permite estilizarlas y no depende de un servicio externo. |
 | D-06 | Sin analítica | Decisión del cliente. Elimina además la necesidad de banner de cookies. |
 | D-07 | Mapa como imagen estática enlazada | El iframe de Google Maps carga cerca de 1 MB de scripts y cookies; la imagen conserva la señal visual y el paciente termina igualmente en su app de mapas. |
-| D-08 | Sin menú hamburguesa en móvil | Añade JS y un estado abierto/cerrado justo en el dispositivo mayoritario, a cambio de poca utilidad en una sola página. |
+| D-08 | Sin menú hamburguesa en móvil (sustituida por D-24) | Añade JS y un estado abierto/cerrado justo en el dispositivo mayoritario, a cambio de poca utilidad en una sola página. |
 | D-09 | Barra fija inferior en móvil en lugar de botón flotante | Un solo acceso a WhatsApp por pantalla; la barra además incluye «Llamar», que el público mayor prefiere. |
 | D-10 | Datos del negocio centralizados | Cambiar teléfono, horario o dirección debe ser editar un bloque, no rastrear el archivo. |
 | D-11 | Colores y tipografía como tokens CSS | Se anticipa un cambio de marca cuando llegue el logo definitivo. |
@@ -233,15 +236,18 @@ DENTISTALANDING/
 ├── assets/
 │   ├── img/
 │   │   ├── logo.svg
-│   │   ├── hero-1.webp
-│   │   ├── hero-2.webp
-│   │   ├── hero-3.webp
+│   │   ├── craneo-cerrado.webp
 │   │   ├── doctor.webp
 │   │   ├── galeria-1.webp … galeria-6.webp
 │   │   └── mapa-estatico.webp
+│   ├── models/
+│   │   ├── craneo.glb
+│   │   └── craneo-ligero.glb
+│   ├── fonts/            (Poppins, Inter en WOFF2)
+│   ├── js/vendor/        (three.js, GLTFLoader, MeshoptDecoder)
 │   └── og-image.jpg
 ├── favicon.ico
-└── Spec-Driven-Development.md
+└── SPEC.md
 ```
 
 ### 7.1 Especificación de imágenes
@@ -321,9 +327,9 @@ Cuatro hitos. Cada tarea es verificable de forma independiente; los criterios se
 
 ### Hito 3 — Comportamiento
 
-- [ ] **T-15 · Slider del hero.** Fundido cada 6 s entre 3 imágenes, con puntos indicadores.
+- [x] ~~**T-15 · Slider del hero.**~~ *Retirado por D-15.* Original: Fundido cada 6 s entre 3 imágenes, con puntos indicadores.
   *Criterio:* el fundido no produce parpadeo ni desplazamiento; los puntos indican la imagen activa y permiten saltar a otra.
-- [ ] **T-16 · Pausa y accesibilidad del slider.** Pausa al pasar el cursor; desactivación total con `prefers-reduced-motion` o con una sola imagen.
+- [x] ~~**T-16 · Pausa y accesibilidad del slider.**~~ *Retirado por D-15; el equivalente está en `specs/001-dentadura-3d-hero/`.* Original: Pausa al pasar el cursor; desactivación total con `prefers-reduced-motion` o con una sola imagen.
   *Criterio:* activando la reducción de movimiento en el sistema operativo, la rotación no ocurre y queda una imagen fija.
 - [ ] **T-17 · Enlaces de contacto.** Todos los `tel:` y todos los `wa.me` con el texto prellenado.
   *Criterio:* cada botón de WhatsApp abre la conversación con «Buen día, me gustaría agendar una cita» ya escrito; en escritorio abre WhatsApp Web.
@@ -351,7 +357,11 @@ Se aplican a toda la página, no a una tarea concreta.
 
 ### 10.1 Rendimiento
 - Contenido principal visible en menos de 2,5 s sobre 4G.
-- Peso total de la página inferior a 1,5 MB(opcional).
+- Presupuesto de peso (peso transferido, comprimido):
+  - Carga crítica (lo necesario para ver la página y contactar): máximo 500 KB.
+  - Carga diferida (3D, animaciones, modelo, texturas): máximo 1,5 MB, iniciada solo después del primer pintado y cuando el navegador esté libre.
+  - Total en escritorio: máximo aproximado de 2 MB. En móvil de gama media: máximo aproximado de 1,5 MB.
+  - Ningún cambio se considera terminado si supera estos límites; el peso real se mide y se reporta en cada feature.
 - Sin desplazamiento de contenido durante la carga.
 
 ### 10.2 Responsive
@@ -391,6 +401,19 @@ Se aplican a toda la página, no a una tarea concreta.
 | 2026-09-08 | El `<h1>` lleva nombre y ciudad; el eslogan domina visualmente | La jerarquía semántica sirve al buscador y a la compartición; la visual, al paciente. |
 | 2026-09-08 | Horario resumido en una línea en el hero | Permite decidir si llamar ahora sin restarle peso al botón principal. |
 | 2026-09-08 | Colores definidos como tokens desde el inicio | El cliente anticipa un cambio de paleta cuando entregue el logo definitivo. |
+| 2026-10-09 | D-14 · Se permiten librerías de animación y 3D autoalojadas en `assets/js/vendor/`; se reemplaza el presupuesto de peso de §10.1 por el de la constitución v2.0.0; se enmienda RNF-02 | La identidad visual pasa a basarse en movimiento y en un modelo 3D del diente. Se carga de forma diferida, con una imagen estática de respaldo visible mientras carga y cuando no se puede mostrar el 3D (reducción de movimiento, ahorro de datos, equipo lento o sin WebGL). |
+| 2026-10-09 | D-15 · Se retira el slider de fotos del hero (y `hero-1/2/3`, overlay oscuro, RF-10 original, T-15/T-16). El hero pasa a fondo blanco con la dentadura 3D centrada; el eslogan y el botón «Servicios» se revelan al abrirse la mandíbula (siempre visibles sin 3D). Constitución v2.1.0 | La dentadura interactiva sustituye a las fotos como elemento memorable; el póster estático es el respaldo y el LCP. |
+| 2026-10-09 | D-16 · Poppins/Inter se autoalojan en WOFF2 (`assets/fonts/`); se retira Google Fonts | Criterio «sin peticiones a dominios externos», RNF-03 y menor tiempo de carga; cuentan en la carga crítica. |
+| 2026-10-12 | D-17 · Se sustituye la dentadura de contorno verde por un cráneo inferior con aspecto de rayos X (`craneo.glb`, `craneo-ligero.glb`, póster `craneo-cerrado.webp`) y el fondo blanco del hero por velos de luz translúcidos que se mueven con el cursor. El cursor ya no deforma el modelo: mueve los velos e inclina el cráneo. La mandíbula abre ≈ 30° (antes 40°) y el cráneo arranca acercado (`--escala-figura`); el scroll solo abre la mandíbula, con difuminado del modelo bajo los textos. El botón «Servicios» pasa a «Conoce nuestros servicios». Constitución v2.2.0 | Nueva dirección visual del cliente (boceto del 12/10/2026). Pendiente: confirmar la autoría/licencia del escaneo (`assets/models/README.md`). |
+| 2026-10-13 | D-18 · Se admite un *bloqueo de introducción* en el hero: las primeras acciones de scroll avanzan la apertura de la mandíbula (velocidad máxima, ≥ 2 s) en lugar de desplazar la página, una sola vez por visita y con salidas de emergencia (Tab, anclas, barra de scroll, modo estático). Constitución v2.3.0 (excepción acotada en el principio II); el hero pasa a alto fijo sin recorrido de scroll | Con el recorrido ligado a la posición de scroll, un gesto largo se saltaba la animación y la presentación perdía sentido. |
+| 2026-10-22 | D-19 · Se rediseña el hero estático (respaldo sin 3D): usa la composición del hero 3D, con el cráneo cerrado y, al hacer scroll, una transición suave al cráneo abierto con el eslogan y el botón «Conoce nuestros servicios» en la boca; el fondo pasa a ser una imagen derivada de `fondo-hero-estatico.jpg` con versión para PC y para móvil. Constitución v2.4.0 (principios III, V y VI) | El respaldo anterior no coincidía con la posición del 3D (eslogan debajo de la figura) y el fondo original (735 × 595 px) no tiene resolución para pantallas de escritorio ni verticales. |
+| 2026-10-23 | D-20 · «Reducir movimiento» ya no desactiva la transición del cráneo cerrado al abierto: solo hay dos modos (3D e imágenes) y el de imágenes lleva siempre la transición por scroll. Quien tiene esa preferencia no recibe el 3D ni ningún movimiento propio; la transición avanza solo con su scroll. Constitución v2.5.0 | Prueba en móvil real: el teléfono tenía «quitar animaciones» activo y el hero se veía fijo con el cráneo abierto; el cliente necesita que se vea el cambio de pose en todos los dispositivos. Riesgo de accesibilidad aceptado y registrado. |
+| 2026-10-23 | D-21 · El *bloqueo de introducción* (D-18) se aplica también al hero de imágenes, no solo al 3D: las primeras acciones de scroll abren el cráneo (≥ ≈ 0,8 s, una vez por visita, con las salidas de emergencia) y el eslogan y el botón aparecen con opacidad creciente; se retira el anclaje `sticky` por scroll nativo de D-19. Si el 3D falla el bloqueo sigue con el mismo progreso. Constitución v2.6.0 (excepción del principio II para los dos modos, también con `prefers-reduced-motion`) | En la prueba en móvil real la transición por el scroll normal pasaba «de golpe» y obligaba a desplazar mucho la página; el cliente pidió el bloqueo como en PC. Riesgo de accesibilidad aceptado y registrado. |
+| 2026-10-23 | D-22 · En las imágenes del hero los **dientes van en capas aparte** (`craneo-cerrado-dientes.webp`, `craneo-abierto-movil-dientes.webp`, `craneo-abierto-escritorio-dientes.webp`, con transparencia): el hueso se mezcla con `multiply` sobre el fondo, como en el 3D, pero los dientes se pintan opacos y sin mezcla para que sean blancos como en el 3D (antes, al multiplicarse por el fondo azulado, se veían azules). Una sola imagen con alfa para el hueso se descartó: el degradado translúcido se rompe en bandas con el alfa con pérdida de WebP. | Pedido del titular tras revisar el hero de imágenes junto al 3D |
+| 2026-10-27 | D-23 · **Rediseño estético general** (spec 003): paleta de 11 azules + gris oscuro + blanco + dorado; títulos en Playfair Display; logo del diente con «HR» e íconos de servicio nuevos (SVG normalizados y optimizados); header oscuro que en PC pasa a translúcido con desenfoque al bajar; fondo de la página que cambia de color de forma continua con el scroll (hero claro → azules → gris oscuro → blanco en la ubicación) con texto que conmuta en el punto de igual contraste; en el hero, botón de cristal, destellos sobre los dientes y gesto de toque con la mandíbula cerrada. Constitución v2.7.0 (principios I, IV, VII y VIII). | Pedido del cliente (documento «cambio de colores y estetica» y tres capturas de referencia). El hero 3D, su transición y el bloqueo de introducción no cambian. |
+| 2026-10-27 | D-24 · En móvil y tableta (< 1024 px) el botón «Llamar» del header se sustituye por un **menú desplegable con las secciones** (botón «Menú», con `aria-expanded`; se cierra con Escape, al elegir sección, al pulsar fuera o al desplazar). Sustituye a D-08. El acceso a «Llamar» no se pierde: sigue en la barra fija inferior (principio II). | Pedido del cliente tras ver el rediseño: en móvil se necesita navegar por las secciones. |
+| 2026-10-28 | D-25 · **Pantalla de presentación**: al cargar, una pantalla oscura con el logo y una animación corta (un diente arriba y otro abajo, hasta cuatro pares; luego las filas se cierran sobre el logo y se desvanece) cubre la página hasta que el hero conoce su modo (3D listo, o imágenes), para que no se vea el modo estático al iniciar. Mientras dura se desactivan clics, teclas y scroll. Tope de 4,5 s antes de cerrar; no se muestra con «reducir movimiento»; con ancla en la URL (p. ej. `#servicios`) sí se muestra y, al terminar, la página queda en esa sección. Constitución v2.8.0 (segunda excepción del principio II). | Pedido del cliente: evitar el parpadeo del modo estático mientras se detecta si el dispositivo soporta 3D. |
+| 2026-10-28 | D-26 · **Gesto de scroll en lugar de gesto de toque** en el hero (con la mandíbula cerrada: una rueda que baja con ratón; un dedo que desliza hacia arriba en pantallas táctiles). **En pantallas táctiles** (`pointer: coarse`) el modelo 3D ya no se inclina hacia el dedo (solo los velos de fondo siguen al puntero). *Enmienda del mismo día:* el **toque para abrir/cerrar la mandíbula se mantiene** en táctil, pero una pulsación larga (> 450 ms o con el dedo movido) no la activa y no ofrece guardar la imagen ni seleccionarla (menú contextual suprimido, imágenes sin puntero ni arrastre). Con ratón y teclado no cambia nada. | Pedido del cliente: en móvil el usuario suele mantener pulsado el modelo y se activaba sin querer. |
 
 ---
 

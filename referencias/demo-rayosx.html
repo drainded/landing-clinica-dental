@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Demo · cráneo inferior en rayos X</title>
+<!--
+  REFERENCIA, no es parte del sitio. Maxilar y mandíbula (modelo escaneado, parte oscura de jaw_envelope) con aspecto de radiografía,
+  mandíbula cerrada que se abre con el scroll. Sin texto y sin deformación.
+  Dientes: el GLB trae los dientes como mallas aparte (dientes_sup, dientes_inf) con el material 'dientes' (blanco brillante).
+  El hueso sigue con el shader de rayos X; los dientes se dibujan encima con un material blanco brillante con luces.
+  Cómo verla: desde la raíz del proyecto `npx serve .` y abrir /referencias/demo-rayosx.html
+  En el proyecto real, three.js va en assets/js/vendor/ (sin CDN).
+-->
+<style>
+  :root{ --color-fondo:#FFFFFF; --color-acento:#0F6E6E; }
+  html,body{ margin:0; background:var(--color-fondo); }
+  .hero{ position:relative; height:240vh; }          /* recorrido de scroll de la apertura */
+  .stage{ position:sticky; top:0; height:100vh; overflow:hidden; }
+  canvas{ display:block; width:100%; height:100%; touch-action:pan-y; } /* no bloquea el scroll vertical */
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+</head>
+<body>
+<main class="hero" id="inicio"><div class="stage" id="stage"></div></main>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+const q = new URLSearchParams(location.search);
+const MODEL = q.get('model') || '../assets/models/craneo.glb';
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const OPEN = THREE.MathUtils.degToRad(+q.get('open') || 30);
+if (q.get('bg') === 'transparent') document.documentElement.style.background = document.body.style.background = 'transparent';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.getElementById('stage').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+
+renderer.setClearColor(0xffffff, 1);
+// Aspecto de radiografía: cada capa de la malla (caras delanteras y traseras) multiplica el blanco
+// del fondo por un azul marino; donde hay más capas o la superficie se ve de canto, se oscurece.
+function xray(abs){
+  return new THREE.ShaderMaterial({
+    uniforms: { uAbs: { value: abs }, uAbsT: { value: abs * 1.6 }, uFade: { value: new THREE.Vector2(+q.get('f0') || 0.30, +q.get('f1') || 1.15) } },
+    side: THREE.DoubleSide, transparent: true, depthTest: false, depthWrite: false,
+    blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
+    blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcColorFactor,
+    vertexShader: `attribute vec4 color; varying float vD; varying vec3 vN, vV; varying float vY;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0);
+        vD = color.r; vN = normalMatrix * normal; vV = -mv.xyz; vY = (modelMatrix * vec4(position,1.0)).y;
+        gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform float uAbs, uAbsT; uniform vec2 uFade; varying float vD; varying vec3 vN, vV; varying float vY;
+      void main(){
+        float ndv = abs(dot(normalize(vN), normalize(vV)));
+        float rim = pow(1.0 - ndv, 1.5);
+        float edge = smoothstep(0.30, 0.0, ndv);
+        float fade = 1.0 - smoothstep(uFade.x, uFade.y, vY);
+        float a = clamp(mix(uAbs, uAbsT, vD) * (0.26 + 0.74 * rim + 0.55 * edge), 0.0, 0.92) * fade;
+        vec3 navy = vec3(0.05, 0.17, 0.34);
+        gl_FragColor = vec4(mix(vec3(1.0), navy, a), 1.0);
+      }`,
+  });
+}
+const MAT = xray(+q.get('ah') || 0.66);
+
+// Dientes: blanco brillante, dibujados después de la capa de rayos X (transparent:true los pone en esa cola; renderOrder 2 va al final)
+scene.add(new THREE.HemisphereLight(0xffffff, 0xa9bbd8, 1.6));
+const luzClave = new THREE.DirectionalLight(0xffffff, 1.7); luzClave.position.set(2, 3, 6); scene.add(luzClave);
+const luzBorde = new THREE.DirectionalLight(0xdbe7ff, 0.9); luzBorde.position.set(-4, 1, -2); scene.add(luzBorde);
+const TEETH = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff, roughness: 0.14, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05,
+  transparent: true, opacity: 1, depthTest: true, depthWrite: true,
+});
+
+const pivot = new THREE.Group(); pivot.rotation.order = 'YXZ'; scene.add(pivot);
+let jaw = null;
+new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(MODEL, (g) => {
+  jaw = g.scene.getObjectByName('mandibula'); if (jaw) jaw.rotation.x = 0;   // cerrada
+  g.scene.traverse(o => {
+    if (!o.isMesh) return;
+    const esDiente = o.material && o.material.name === 'dientes';   // material del GLB
+    o.material = esDiente ? TEETH : MAT; o.frustumCulled = false; o.renderOrder = esDiente ? 2 : 1;
+  });
+  pivot.add(g.scene); window.ready = true;
+}, undefined, (e) => { window.err = String(e); window.ready = true; });
+
+// Cursor / toque: solo inclina la figura, no la deforma
+const ptr = { x: 0, y: 0, active: false, sx: 0, sy: 0 };
+function setPointer(e){ ptr.x = (e.clientX / innerWidth) * 2 - 1; ptr.y = -((e.clientY / innerHeight) * 2 - 1); ptr.active = !REDUCED && !q.get('np'); }
+addEventListener('pointermove', setPointer); addEventListener('pointerdown', setPointer);
+addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') ptr.active = false; });
+document.documentElement.addEventListener('pointerleave', () => { ptr.active = false; });
+
+let dist = 5, zoom = 1;
+function resize(){
+  const w = innerWidth, h = innerHeight, a = w / h;
+  renderer.setSize(w, h, false); camera.aspect = a;
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  dist = Math.max(7.4, 3.4 / (2 * halfTan * a)); camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// Scroll nativo -> apertura de la mandíbula
+const hero = document.getElementById('inicio');
+const clamp01 = (x) => Math.min(1, Math.max(0, x)), ease = (x) => x * x * (3 - 2 * x);
+let target = REDUCED ? 0 : 0, prog = 0;
+function readScroll(){ if (REDUCED) return; target = q.get('p') !== null ? +q.get('p') : clamp01(scrollY / (hero.offsetHeight - innerHeight)); }
+addEventListener('scroll', readScroll, { passive: true }); readScroll();
+
+let last = performance.now(), t = 0;
+renderer.setAnimationLoop(() => {
+  const now = performance.now(), dt = Math.min((now - last) / 1000, 0.1); last = now; t += dt;
+  const k = 1 - Math.exp(-dt * 9);
+  prog += (target - prog) * k * 0.6;
+  const o = ease(clamp01(prog / 0.8));
+  if (jaw) jaw.rotation.x = OPEN * o;
+  zoom = 1 + 0.1 * o;
+  camera.position.set(0, 0.1 - 0.3 * o, dist * zoom); camera.lookAt(0, -0.3 * o, 0);
+  ptr.sx += (ptr.x - ptr.sx) * k; ptr.sy += (ptr.y - ptr.sy) * k;
+  const act = ptr.active ? 1 : 0;
+  const yaw = THREE.MathUtils.degToRad(+q.get('yaw') || 0) + ((REDUCED || q.get('still')) ? 0 : Math.sin(t * 0.5) * 0.1);
+  pivot.rotation.y = THREE.MathUtils.lerp(pivot.rotation.y, yaw + ptr.sx * 0.25 * act, k);
+  pivot.rotation.x = THREE.MathUtils.lerp(pivot.rotation.x, -ptr.sy * 0.12 * act, k);
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
