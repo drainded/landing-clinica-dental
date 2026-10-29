@@ -1,5 +1,41 @@
 <!--
 Sync Impact Report
+- Version change: 2.7.0 → 2.8.0 (MINOR: se añade una segunda excepción acotada a la regla de no retrasar ni tapar el contacto;
+  no se elimina ningún principio ni se debilita el scroll nativo una vez terminada la presentación)
+- Modified principles:
+  - II. Contacto primero: nueva excepción, la *pantalla de presentación* (D-25): cubre la página y la vuelve inerte mientras
+    dura una animación corta de dientes sobre el logo y se decide el modo del hero (3D o imágenes). Condiciones: solo con JS y
+    sin «reducir movimiento» (con ancla en la URL sí se muestra); tope de 4,5 s antes de cerrar y respaldo CSS a los 7 s; una vez por carga;
+    no retrasa nada de la carga crítica.
+  - Riesgo registrado: durante ≈ 2–4 s (hasta ≈ 5,6 s en el peor caso) no se puede llamar ni escribir por WhatsApp desde la
+    página; el cliente lo pidió para evitar que se vea el modo estático al iniciar.
+- Follow-up TODOs:
+  - SPEC.md: D-25 registrada.
+  - Medir la duración real en móvil de gama media y con red 4G limitada (principio IX).
+-->
+<!--
+Sync Impact Report
+- Version change: 2.6.0 → 2.7.0 (MINOR: la identidad visual cambia por petición expresa de una spec (003) y se amplía la
+  guía de fuentes y de animación; no se elimina ningún principio ni se debilita el contacto ni el scroll nativo)
+- Modified principles:
+  - I. Identidad y contenido: la paleta pasa a la escala de 11 azules del cliente (`--azul-50` … `--azul-950`) más un gris
+    oscuro frío (`--color-gris`), blanco, dorado (`--color-dorado`) y un texto oscuro casi negro (`--color-texto-oscuro`);
+    el logo «HR» circular se sustituye por el diente con «HR» (dos variantes de color, claro y oscuro); los títulos usan
+    Playfair Display. Los tokens del hero 3D (`--color-velo-*`, `--color-rayosx*`) no cambian. El color del fondo y del texto
+    libre puede variar con el scroll mediante variables CSS (`--fondo`, `--texto`) que escribe `js/principal.js` leyendo
+    los tokens; sigue prohibido el color literal fuera de `:root`. Los íconos y logos SVG son activos generados con la paleta.
+  - IV. Librerías y dependencias: se añade Playfair Display (WOFF2 variable, SIL OFL, autoalojada, `font-display: swap`) a
+    Poppins e Inter; sigue sin haber Google Fonts ni CDN.
+  - VII. Rendimiento en ejecución: se admite cambiar el `background-color` de **una sola** capa fija a pantalla completa con
+    el scroll (un `scroll` pasivo con rAF); el resto sigue animándose solo con `transform`/`opacity`.
+  - VIII. Accesibilidad: el texto sobre fondo variable conmuta entre texto oscuro y claro en el punto de igual contraste
+    (≥ 4,5 : 1 en todo el recorrido); sin interpolar el color del texto.
+- Follow-up TODOs:
+  - SPEC.md: D-23 registrada; §5.1 y §5.2 actualizados.
+  - Prueba en móvil real del header translúcido, del fondo continuo y del gesto de toque (principio IX).
+-->
+<!--
+Sync Impact Report
 - Version change: 2.5.0 → 2.6.0 (MINOR: la excepción del «bloqueo de introducción» del principio II se amplía
   de uno a los dos modos del hero; no se elimina ningún principio ni se debilita el acceso a contacto)
 - Modified principles:
@@ -133,8 +169,10 @@ los colores del hero 3D (tinte de la radiografía `--color-rayosx`, reflejo de l
 `--color-velo-1`, `--color-velo-2`) MUST leerse en tiempo de ejecución de esos tokens. El hero
 tiene fondo de velos de luz (tokens `--color-velo-*`) con texto oscuro y sin capa overlay oscura. Los datos del negocio (teléfono, WhatsApp, horario, dirección, coordenadas) MUST vivir
 en un único bloque de constantes en `js/principal.js`, y los datos literales del `<head>` (title,
-Open Graph, JSON-LD) MUST mantenerse sincronizados con él. La identidad actual (paleta,
-Poppins/Inter, logo «HR») se conserva salvo que una spec pida cambiarla. Está prohibido publicar
+Open Graph, JSON-LD) MUST mantenerse sincronizados con él. La identidad (paleta de azules y gris oscuro, Playfair Display para títulos, Inter para texto, logo del diente con «HR»,
+rediseñada por la spec 003) se conserva salvo que una spec pida cambiarla. El color del fondo y del texto libre puede
+variar con el scroll mediante las variables `--fondo`, `--texto` y `--texto-suave`, que `js/principal.js` escribe a partir
+de los tokens (nunca de literales). Está prohibido publicar
 datos inventados: reseñas, cifras, credenciales, servicios. Los contadores o estadísticas solo se
 muestran con datos reales confirmados por el cliente. Si no hay reseñas reales, la sección se
 elimina del HTML. Los textos van en español de México y trato de usted.
@@ -145,15 +183,24 @@ El acceso a contacto MUST estar visible y funcional en todo momento: barra fija 
 («Llamar» y «WhatsApp») en móvil, botón flotante de WhatsApp en escritorio y teléfono pulsable
 (`tel:`). Nunca se muestran a la vez la barra y el botón flotante. Todos los enlaces `wa.me`
 usan el mismo mensaje prellenado. Ninguna animación, transición ni efecto 3D puede taparlo,
-retrasarlo ni bloquear el scroll nativo, con **una única excepción**: el *bloqueo de introducción*
-del hero. Al cargar la página en lo alto, las primeras acciones de scroll (rueda, arrastre táctil,
+retrasarlo ni bloquear el scroll nativo, con **dos excepciones**: la *pantalla de presentación* (más abajo) y el
+*bloqueo de introducción* del hero. Al cargar la página en lo alto, las primeras acciones de scroll (rueda, arrastre táctil,
 teclas de desplazamiento) pueden avanzar la animación de entrada del hero, con una velocidad
 máxima, en lugar de desplazar la página; así un gesto largo no se salta la presentación. El bloqueo
 MUST: (1) terminar al completarse la animación (unos segundos como máximo) y volver a armarse solo
 al regresar al inicio del todo tras haber bajado (la mandíbula se cierra y se vuelve a abrir); (2) no tapar ni retrasar el contacto: la barra fija, el botón flotante, el teléfono y
 los enlaces siguen visibles y pulsables durante el bloqueo; (3) liberarse de inmediato con la navegación por teclado (Tab), con un clic en un ancla interna, con cualquier desplazamiento externo (barra de scroll, buscar en la página, ancla en la URL), en móvil apaisado bajo (el hero no cabe en pantalla) y si la página se carga ya desplazada; (4) aplicarse igual a los dos modos del hero (3D e imágenes), también con `prefers-reduced-motion`, ahorro de datos y equipo lento, y no activarse sin JavaScript; (5) implementarse interceptando los eventos de entrada, nunca con `overflow: hidden` en
 `<html>`/`<body>` ni con un scroll simulado; (6) no interceptar el zoom del navegador. Fuera de
-este caso el scroll nativo es siempre libre. Todo cambio MUST preservar la funcionalidad existente
+este caso el scroll nativo es siempre libre.
+
+**Pantalla de presentación** (spec 003, D-25). Al cargar, una pantalla a pantalla completa con una animación corta (cuatro
+pares de dientes que entran, se cierran sobre el logo y se desvanecen) tapa la página mientras se decide el modo del hero, para
+que no se vea el modo de imágenes antes de que el 3D esté listo. Mientras dura, la página es inerte (sin clics, teclas ni scroll,
+tampoco el contacto). MUST: (1) mostrarse solo con JavaScript y no con «reducir movimiento» (con un ancla en la URL sí); (2) durar
+lo que tarden los dientes en entrar (≈ 2 s) más lo que falte hasta que el hero esté listo, con un **tope de 4,5 s** antes de
+iniciar el cierre (≈ 1,1 s) y un respaldo CSS que la oculta sola a los 7 s aunque el JavaScript falle; (3) no volver a mostrarse
+hasta una nueva carga; (4) dejar la página y el contacto plenamente utilizables en cuanto termina; (5) no cargar nada propio
+fuera de la carga crítica (los dientes van en línea en el HTML, el logo es el mismo del header). Todo cambio MUST preservar la funcionalidad existente
 (anclas, inyección por `data-campo`, datos del hero). El slider de fotos fue retirado por la
 decisión D-15 de `SPEC.md` y no forma parte de la funcionalidad a preservar.
 Razón: es el objetivo del proyecto y el público, mayoritariamente móvil con 4G, prefiere llamar
@@ -178,7 +225,7 @@ reportarse en cada feature.
 Solo se permiten librerías de animación y 3D necesarias: GSAP, ScrollTrigger, Lenis, Three.js o
 su alternativa ligera aprobada en el plan. MUST descargarse dentro de `assets/js/vendor/`, con
 su versión y licencia registradas, nunca desde un CDN ni como script de terceros. El código
-propio vive en `js/`. Las fuentes (Poppins 600/700 e Inter 400/500) MUST autoalojarse en WOFF2
+propio vive en `js/`. Las fuentes (Playfair Display variable, Poppins 600/700 e Inter 400/500) MUST autoalojarse en WOFF2
 en `assets/fonts/`, con `font-display: swap`; la página no hace peticiones a Google Fonts ni
 `preconnect` a dominios de terceros. Ninguna dependencia nueva sin justificar su peso. Sin
 analítica ni cookies. Fuera de lo anterior, el proyecto sigue siendo HTML, CSS y JavaScript sin
@@ -210,14 +257,14 @@ La detección usa características disponibles, con degradación segura cuando u
 en el navegador.
 
 ### VII. Rendimiento en ejecución
-Se anima solo `transform` y `opacity` siempre que sea posible. El render 3D MUST pausarse
+Se anima solo `transform` y `opacity` siempre que sea posible; la única excepción admitida es el `background-color` de una sola capa fija a pantalla completa (fondo continuo por scroll, spec 003). El render 3D MUST pausarse
 cuando la dentadura no esté en pantalla o la pestaña esté oculta, y liberar sus recursos al
 destruirse. Objetivo de 60 fps y mínimo aceptable de 30 fps en un móvil de gama media, con
 interacción sin retrasos perceptibles.
 
 ### VIII. Accesibilidad y responsive
 Mobile-first desde 360 px, sin desplazamiento horizontal (puntos de quiebre 768 px y 1024 px).
-Texto mínimo de 16 px y contraste de 4.5:1. Navegación completa por teclado con foco visible
+Texto mínimo de 16 px y contraste de 4.5:1. Si el fondo varía con el scroll, el texto sobre él MUST conmutar entre el juego oscuro y el claro en el punto de igual contraste (nunca interpolar el color del texto) para mantener 4,5:1 en todo el recorrido. Navegación completa por teclado con foco visible
 y áreas pulsables de al menos 44×44 px. El contenido nunca depende de una animación para ser
 legible. El objeto 3D es decorativo y se marca como tal para lectores de pantalla. Las
 imágenes informativas llevan texto alternativo descriptivo; con `width`/`height` declarados y
@@ -258,4 +305,4 @@ material, PATCH para aclaraciones y redacción. Los planes (`plan.md`) MUST incl
 verificación de cumplimiento con los nueve principios, y toda desviación MUST justificarse por
 escrito.
 
-**Version**: 2.6.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-23
+**Version**: 2.8.0 | **Ratified**: 2026-10-09 | **Last Amended**: 2026-10-28

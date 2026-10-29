@@ -91,7 +91,7 @@ Orden vertical de la página: **Hero → Servicios → Sobre el doctor → Galer
 
 ### 4.1 Header
 
-- **Móvil (< 1024 px):** logo a la izquierda, botón «Llamar» a la derecha. Sin menú hamburguesa. Header no fijo.
+- **Móvil (< 1024 px):** logo a la izquierda y, a la derecha, el botón «Menú» que despliega las secciones de la página (*Servicios · El doctor · Galería · Reseñas · Ubicación*; D-24, que sustituye a D-08). Ya no hay botón «Llamar» en el header: «Llamar» sigue en la barra fija inferior (§4.8). Header no fijo.
 - **Escritorio (≥ 1024 px):** logo a la izquierda; en el centro, anclas a *Servicios · El doctor · Galería · Reseñas · Ubicación*; a la derecha, el teléfono visible y pulsable. Header fijo al hacer scroll, con fondo sólido para mantener la legibilidad.
 
 ### 4.2 Hero
@@ -162,29 +162,31 @@ El mismo texto prellenado en todos los botones. No es instrumentación: solo le 
 
 ### 5.1 Tokens de color
 
-Los colores actuales son un punto de partida y **se espera que cambien** cuando el cliente entregue su logo definitivo. Por eso ningún color puede aparecer escrito directamente en una regla CSS: todos se declaran una sola vez en `:root`.
+Ningún color puede aparecer escrito directamente en una regla CSS: todos se declaran una sola vez en `:root`. La paleta fue rediseñada por la spec 003 (D-23).
 
 | Token | Valor | Uso |
 |---|---|---|
-| `--color-fondo` | `#F5EFE6` | Fondo general (beige) |
-| `--color-superficie` | `#FFFFFF` | Tarjetas y bloques elevados |
-| `--color-texto` | `#2C2C2C` | Texto principal |
-| `--color-texto-suave` | `#5A5A5A` | Texto secundario |
-| `--color-acento` | `#0F6E6E` | Botones, enlaces, íconos |
-| `--color-acento-oscuro` | `#0B5252` | Estado hover/active del acento |
-| `--color-whatsapp` | `#25D366` | Exclusivo de los botones de WhatsApp |
-| `--color-overlay` | `rgba(0,0,0,.45)` | Capa oscura del hero |
+| `--azul-50` … `--azul-950` | `#E6F2FF #B8DBFF #8AC4FF #5CADFF #2E96FF #0080FF #0069D1 #0052A3 #003B75 #002347 #000D1A` | Escala de azules de la marca |
+| `--color-gris` | `#1A1D21` | Fondo de doctor, consultorio y reseñas; tarjetas de servicio |
+| `--color-gris-claro` | `#262B31` | Bordes y superficies sobre el gris |
+| `--color-blanco` | `#FFFFFF` | Ubicación y pie |
+| `--color-dorado` | `#F5C451` | Estrellas de reseñas |
+| `--color-texto-oscuro` / `--color-texto-claro` | `#00050A` / `#FFFFFF` | Texto sobre fondos claros / oscuros |
+| `--color-acento` / `-oscuro` / `-claro` | `--azul-600` / `--azul-800` / `--azul-300` | Botones, enlaces, íconos |
+| `--color-header` / `--color-header-vidrio` | `--azul-950` / `--azul-950` al 60 % | Header oscuro y translúcido |
+| `--color-whatsapp` | `#11803D` | Exclusivo de los botones de WhatsApp |
+| `--color-velo-*`, `--color-rayosx*` | sin cambios | Hero 3D |
 
-El verde azulado del acento se eligió porque contrasta con el beige sin competir con él y por su asociación con salud e higiene. El verde de WhatsApp se mantiene tal cual porque el usuario lo reconoce como marca.
+El fondo de la página cambia de forma continua con el scroll (`--fondo`, `--texto`, `--texto-suave`, escritas por `js/principal.js` a partir de estos tokens). El verde de WhatsApp se mantiene tal cual porque el usuario lo reconoce como marca.
 
 ### 5.2 Tipografía
 
 | Token | Valor |
 |---|---|
-| `--fuente-titulos` | `'Poppins', system-ui, sans-serif` |
+| `--fuente-titulos` | `'Playfair Display', Georgia, serif` |
 | `--fuente-texto` | `'Inter', system-ui, sans-serif` |
 
-Se autoalojan en WOFF2 en `assets/fonts/` únicamente los pesos necesarios (Poppins 600/700, Inter 400/500), con `display=swap` y sin peticiones a Google Fonts (D-16).
+Se autoalojan en WOFF2 en `assets/fonts/` únicamente los pesos necesarios (Playfair Display variable, Poppins 600/700 si se siguen usando, Inter 400/500), con `display=swap` y sin peticiones a Google Fonts (D-16, D-23).
 
 ### 5.3 Escala y espaciado
 
@@ -213,7 +215,7 @@ Se autoalojan en WOFF2 en `assets/fonts/` únicamente los pesos necesarios (Popp
 | D-05 | Reseñas estáticas, no widget de Google | Evita script de terceros, permite estilizarlas y no depende de un servicio externo. |
 | D-06 | Sin analítica | Decisión del cliente. Elimina además la necesidad de banner de cookies. |
 | D-07 | Mapa como imagen estática enlazada | El iframe de Google Maps carga cerca de 1 MB de scripts y cookies; la imagen conserva la señal visual y el paciente termina igualmente en su app de mapas. |
-| D-08 | Sin menú hamburguesa en móvil | Añade JS y un estado abierto/cerrado justo en el dispositivo mayoritario, a cambio de poca utilidad en una sola página. |
+| D-08 | Sin menú hamburguesa en móvil (sustituida por D-24) | Añade JS y un estado abierto/cerrado justo en el dispositivo mayoritario, a cambio de poca utilidad en una sola página. |
 | D-09 | Barra fija inferior en móvil en lugar de botón flotante | Un solo acceso a WhatsApp por pantalla; la barra además incluye «Llamar», que el público mayor prefiere. |
 | D-10 | Datos del negocio centralizados | Cambiar teléfono, horario o dirección debe ser editar un bloque, no rastrear el archivo. |
 | D-11 | Colores y tipografía como tokens CSS | Se anticipa un cambio de marca cuando llegue el logo definitivo. |
@@ -408,6 +410,10 @@ Se aplican a toda la página, no a una tarea concreta.
 | 2026-10-23 | D-20 · «Reducir movimiento» ya no desactiva la transición del cráneo cerrado al abierto: solo hay dos modos (3D e imágenes) y el de imágenes lleva siempre la transición por scroll. Quien tiene esa preferencia no recibe el 3D ni ningún movimiento propio; la transición avanza solo con su scroll. Constitución v2.5.0 | Prueba en móvil real: el teléfono tenía «quitar animaciones» activo y el hero se veía fijo con el cráneo abierto; el cliente necesita que se vea el cambio de pose en todos los dispositivos. Riesgo de accesibilidad aceptado y registrado. |
 | 2026-10-23 | D-21 · El *bloqueo de introducción* (D-18) se aplica también al hero de imágenes, no solo al 3D: las primeras acciones de scroll abren el cráneo (≥ ≈ 0,8 s, una vez por visita, con las salidas de emergencia) y el eslogan y el botón aparecen con opacidad creciente; se retira el anclaje `sticky` por scroll nativo de D-19. Si el 3D falla el bloqueo sigue con el mismo progreso. Constitución v2.6.0 (excepción del principio II para los dos modos, también con `prefers-reduced-motion`) | En la prueba en móvil real la transición por el scroll normal pasaba «de golpe» y obligaba a desplazar mucho la página; el cliente pidió el bloqueo como en PC. Riesgo de accesibilidad aceptado y registrado. |
 | 2026-10-23 | D-22 · En las imágenes del hero los **dientes van en capas aparte** (`craneo-cerrado-dientes.webp`, `craneo-abierto-movil-dientes.webp`, `craneo-abierto-escritorio-dientes.webp`, con transparencia): el hueso se mezcla con `multiply` sobre el fondo, como en el 3D, pero los dientes se pintan opacos y sin mezcla para que sean blancos como en el 3D (antes, al multiplicarse por el fondo azulado, se veían azules). Una sola imagen con alfa para el hueso se descartó: el degradado translúcido se rompe en bandas con el alfa con pérdida de WebP. | Pedido del titular tras revisar el hero de imágenes junto al 3D |
+| 2026-10-27 | D-23 · **Rediseño estético general** (spec 003): paleta de 11 azules + gris oscuro + blanco + dorado; títulos en Playfair Display; logo del diente con «HR» e íconos de servicio nuevos (SVG normalizados y optimizados); header oscuro que en PC pasa a translúcido con desenfoque al bajar; fondo de la página que cambia de color de forma continua con el scroll (hero claro → azules → gris oscuro → blanco en la ubicación) con texto que conmuta en el punto de igual contraste; en el hero, botón de cristal, destellos sobre los dientes y gesto de toque con la mandíbula cerrada. Constitución v2.7.0 (principios I, IV, VII y VIII). | Pedido del cliente (documento «cambio de colores y estetica» y tres capturas de referencia). El hero 3D, su transición y el bloqueo de introducción no cambian. |
+| 2026-10-27 | D-24 · En móvil y tableta (< 1024 px) el botón «Llamar» del header se sustituye por un **menú desplegable con las secciones** (botón «Menú», con `aria-expanded`; se cierra con Escape, al elegir sección, al pulsar fuera o al desplazar). Sustituye a D-08. El acceso a «Llamar» no se pierde: sigue en la barra fija inferior (principio II). | Pedido del cliente tras ver el rediseño: en móvil se necesita navegar por las secciones. |
+| 2026-10-28 | D-25 · **Pantalla de presentación**: al cargar, una pantalla oscura con el logo y una animación corta (un diente arriba y otro abajo, hasta cuatro pares; luego las filas se cierran sobre el logo y se desvanece) cubre la página hasta que el hero conoce su modo (3D listo, o imágenes), para que no se vea el modo estático al iniciar. Mientras dura se desactivan clics, teclas y scroll. Tope de 4,5 s antes de cerrar; no se muestra con «reducir movimiento»; con ancla en la URL (p. ej. `#servicios`) sí se muestra y, al terminar, la página queda en esa sección. Constitución v2.8.0 (segunda excepción del principio II). | Pedido del cliente: evitar el parpadeo del modo estático mientras se detecta si el dispositivo soporta 3D. |
+| 2026-10-28 | D-26 · **Gesto de scroll en lugar de gesto de toque** en el hero (con la mandíbula cerrada: una rueda que baja con ratón; un dedo que desliza hacia arriba en pantallas táctiles). **En pantallas táctiles** (`pointer: coarse`) el modelo 3D ya no se inclina hacia el dedo (solo los velos de fondo siguen al puntero). *Enmienda del mismo día:* el **toque para abrir/cerrar la mandíbula se mantiene** en táctil, pero una pulsación larga (> 450 ms o con el dedo movido) no la activa y no ofrece guardar la imagen ni seleccionarla (menú contextual suprimido, imágenes sin puntero ni arrastre). Con ratón y teclado no cambia nada. | Pedido del cliente: en móvil el usuario suele mantener pulsado el modelo y se activaba sin querer. |
 
 ---
 

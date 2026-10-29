@@ -24,6 +24,7 @@
   // valores; si se recalibran (T042), cambiarlos en los dos sitios.
   var UMBRAL_MEMORIA_GB = 2;
   var UMBRAL_NUCLEOS = 2;
+  var UMBRAL_NUCLEOS_LIGERO = 4; // hasta este número de núcleos se usa el modelo ligero también en escritorio
   var UMBRAL_FPS_MIN = 24;       // fps medios de los primeros 3 s por debajo de los cuales se degrada
   var ANCHO_MOVIL_PX = 768;      // táctil por debajo de este ancho → nivel ligero
   var RETRASO_3D_TRAS_CARGA_MS = 2000; // espera tras el evento load antes de cargar three.js y el modelo (el póster se ve mientras tanto)
@@ -36,10 +37,36 @@
   var IMPULSO_TOQUE_MS = 400;   // al soltar un deslizamiento rápido, el dedo «sigue» este tiempo a su última velocidad
   var VELOCIDAD_MIN_TOQUE = 0.3; // px/ms mínimos para aplicar ese impulso
   var UMBRAL_REFRESCO_PX = 1.5;  // arrastre hacia abajo (con la boca cerrada y en lo alto) que se deja al navegador para refrescar
+  var PULSACION_LARGA_MS = 450;     // un toque más largo que esto (o con el dedo movido) no abre/cierra la mandíbula
+  var UMBRAL_MOVIMIENTO_TOQUE_PX = 12;
   var HOLGURA_TOQUE_PX = 14;     // el dedo es menos preciso que el ratón: se amplía así el área de toque
   var PAUSA_CURSOR_MS = 80;      // mínimo entre comprobaciones de «el ratón está sobre el modelo» (cambia el cursor)
   var ELIPSE_RESPALDO = { ancho: 0.42, alto: 0.45 }; // área de clic mientras el 3D no ha cargado (fracción de la figura)
   var CONSULTA_APAISADO_BAJO = "(orientation: landscape) and (max-height: 500px)"; // móvil en horizontal: hero normal, sin bloqueo
+  // Rediseño estético (spec 003): paradas del fondo continuo, header translúcido y gesto de toque del hero
+  var LINEA_REFERENCIA = 0.5;    // fracción del alto de la ventana donde se mide la posición del scroll para el color de fondo
+  var UMBRAL_HEADER_PX = 8;      // scroll a partir del cual el header de escritorio pasa a translúcido
+  var GESTO_ESPERA_MS = 2500;    // inactividad con la mandíbula cerrada antes de mostrar el gesto de scroll
+  var GESTO_DURACION_MS = 2600;  // duración de cada gesto (la misma que su animación en css/estilos.css)
+  var GESTO_PAUSA_MS = 5500;     // pausa entre gestos
+  var GESTO_MAX_CICLOS = 3;      // veces que se muestra el gesto por visita, como máximo
+  // Paradas {ancla, f, token}: el color de fondo en cada punto de la página (ancla + fracción de su alto; colores = tokens de :root)
+  var PARADAS_FONDO = [
+    { ancla: "servicios", f: 0, token: "--azul-50" },
+    { ancla: "servicios", f: 0.25, token: "--azul-100" },
+    { ancla: "servicios", f: 0.5, token: "--azul-300" },
+    { ancla: "servicios", f: 0.75, token: "--azul-600" },
+    { ancla: "servicios", f: 1, token: "--azul-800" },
+    { ancla: "doctor", f: 0.35, token: "--color-gris" },
+    { ancla: "resenas", f: 1, token: "--color-gris" },
+    { ancla: "ubicacion", f: 0.5, token: "--color-blanco" }
+  ];
+  // Pantalla de presentación (spec 003, D-25)
+  var PRESENTACION_MIN_MS = 2000;     // los 4 pares de dientes tardan ≈ 1,6 s en entrar; esta es la espera mínima antes de cerrar
+  var PRESENTACION_TOPE_MS = 4500;    // tope absoluto: nunca se retiene la página más de esto (el CSS la oculta sola a los 7 s)
+  var PRESENTACION_CIERRE_MS = 750;   // retraso (.15 s) + duración (.6 s) del cierre de los dientes (css/estilos.css, fila-baja / fila-sube)
+  var PRESENTACION_SALIDA_MS = 450;   // duración del desvanecimiento final
+  var RETRASO_3D_PRESENTACION_MS = 150; // con la presentación activa el 3D no espera: la página aún no se ve
   var RUTA_MODELO_COMPLETO = "assets/models/craneo.glb";
   var RUTA_MODELO_LIGERO = "assets/models/craneo-ligero.glb";
 
@@ -63,7 +90,7 @@
     horarioCompleto: [
       { dia: "Lunes a viernes", horas: "9:00 – 19:00" },
       { dia: "Sábado", horas: "9:00 – 14:00" },
-      { dia: "Domingo", horas: "Cerrado" }
+      { dia: "Domingo", horas: "Solo con cita" }
     ],
 
     // Dirección real del negocio (sección 8 del spec)
@@ -141,7 +168,9 @@
 
   function elegirNivel() {
     var tactil = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    return tactil && window.innerWidth < ANCHO_MOVIL_PX ? "ligero" : "completo";
+    // Móvil táctil estrecho o equipo de pocos núcleos: modelo ligero (menos triángulos, sin antialias, menos píxeles)
+    var pocosNucleos = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= UMBRAL_NUCLEOS_LIGERO;
+    return (tactil && window.innerWidth < ANCHO_MOVIL_PX) || pocosNucleos ? "ligero" : "completo";
   }
 
   /**
@@ -392,7 +421,28 @@
       var ny = (y - (r.top + r.height / 2)) / (r.height * ELIPSE_RESPALDO.alto);
       return nx * nx + ny * ny <= 1;
     }
+    // Pulsación larga (táctil): no es un toque. Al soltar tras mantener pulsado no se abre/cierra la mandíbula, y el menú
+    // contextual (guardar imagen, etc.) se suprime.
+    var tPulsacion = 0;
+    var yPulsacion = 0;
+    var xPulsacion = 0;
+    function alPulsarFigura(e) {
+      tPulsacion = performance.now();
+      xPulsacion = e.clientX;
+      yPulsacion = e.clientY;
+    }
+    function esPulsacionLarga(e) {
+      var tactil = e.pointerType === "touch" || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+      if (!tactil || !tPulsacion) return false;
+      var largo = performance.now() - tPulsacion > PULSACION_LARGA_MS;
+      var movido = Math.hypot(e.clientX - xPulsacion, e.clientY - yPulsacion) > UMBRAL_MOVIMIENTO_TOQUE_PX;
+      return largo || movido;
+    }
+    function alMenuContextual(e) {
+      if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) e.preventDefault();
+    }
     function alClicFigura(e) {
+      if (e.detail !== 0 && esPulsacionLarga(e)) return;
       // Activación sin puntero (lector de pantalla, teclado) → siempre; con puntero, solo cerca del modelo
       if (e.detail !== 0 && e.pointerType !== "" && !sobreElModelo(e.clientX, e.clientY, e.pointerType === "touch")) return;
       alternar();
@@ -420,6 +470,8 @@
       figura.setAttribute("aria-label", "Abrir o cerrar la mandíbula");
       figura.setAttribute("aria-pressed", hero.hasAttribute("data-revelado") ? "true" : "false");
       figura.addEventListener("click", alClicFigura);
+      figura.addEventListener("pointerdown", alPulsarFigura, { passive: true });
+      figura.addEventListener("contextmenu", alMenuContextual);
       figura.addEventListener("pointermove", alMoverSobreFigura, { passive: true });
       figura.addEventListener("pointerleave", alSalirDeFigura, { passive: true });
       figura.addEventListener("keydown", alTeclearFigura);
@@ -429,6 +481,8 @@
       clicActivo = false;
       ["role", "tabindex", "aria-label", "aria-pressed"].forEach(function (a) { figura.removeAttribute(a); });
       figura.removeEventListener("click", alClicFigura);
+      figura.removeEventListener("pointerdown", alPulsarFigura);
+      figura.removeEventListener("contextmenu", alMenuContextual);
       figura.removeEventListener("pointermove", alMoverSobreFigura);
       figura.removeEventListener("pointerleave", alSalirDeFigura);
       figura.classList.remove("is-sobre-modelo");
@@ -582,16 +636,354 @@
       window.setTimeout(function () {
         if (window.requestIdleCallback) window.requestIdleCallback(cargar);
         else cargar();
-      }, RETRASO_3D_TRAS_CARGA_MS);
+      }, document.documentElement.classList.contains("cargando") ? RETRASO_3D_PRESENTACION_MS : RETRASO_3D_TRAS_CARGA_MS);
     }
     if (captura) cargar();
     else if (document.readyState === "complete") programarCarga();
     else window.addEventListener("load", programarCarga, { once: true });
   }
 
+
+  /* ---------- 3b. Rediseño estético (spec 003) ---------- */
+  function leerHex(texto) {
+    var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((texto || "").trim());
+    if (!m) return null;
+    var h = m[1];
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+
+  // Luminancia relativa (WCAG 2.x) de un color [r, g, b]
+  function luminancia(c) {
+    function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  }
+
+  /**
+   * Fondo continuo (specs/003, research R1 y R2): una capa fija de color cuyo valor sigue al scroll. Las paradas
+   * PARADAS_FONDO fijan el color en puntos de la página (ancla + fracción de su alto); entre dos paradas se mezcla en sRGB
+   * según la posición del scroll medida a LINEA_REFERENCIA del alto de la ventana. El texto sobre fondo libre no se
+   * interpola: conmuta entre el color oscuro y el claro en la luminancia de igual contraste con ambos
+   * (≥ 4,5 : 1 a los dos lados). Escribe --fondo y --texto en <html> y data-tono («claro» = fondo claro, texto oscuro).
+   * Con «reducir movimiento», sin las anclas o sin tokens legibles no se activa y cada sección usa su color fijo.
+   * También alterna .is-desplazado del header (translúcido en escritorio).
+   */
+  function iniciarFondoYEncabezado() {
+    var raiz = document.documentElement;
+    var encabezado = document.querySelector(".encabezado");
+    var reducir = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+    var paradas = null;      // [{pos, color}] en px de documento, crecientes
+    var colores = null;      // tokens leídos
+    var cuadro = 0;
+    var tono = "";
+    var desplazado = null;
+    var activo = false;
+
+    function cargarColores() {
+      var estilo = window.getComputedStyle(raiz);
+      var oscuro = leerHex(estilo.getPropertyValue("--color-texto-oscuro"));
+      var claro = leerHex(estilo.getPropertyValue("--color-texto-claro"));
+      var lista = [];
+      for (var i = 0; i < PARADAS_FONDO.length; i++) {
+        var c = leerHex(estilo.getPropertyValue(PARADAS_FONDO[i].token));
+        var el = document.getElementById(PARADAS_FONDO[i].ancla);
+        if (!c || !el) return null;
+        lista.push({ def: PARADAS_FONDO[i], color: c, el: el });
+      }
+      if (!oscuro || !claro) return null;
+      var lo = luminancia(oscuro), ll = luminancia(claro);
+      return {
+        lista: lista,
+        textoOscuro: estilo.getPropertyValue("--color-texto-oscuro").trim(),
+        textoClaro: estilo.getPropertyValue("--color-texto-claro").trim(),
+        // luminancia del fondo donde el contraste con el texto oscuro y con el claro es el mismo
+        cruce: Math.sqrt((ll + 0.05) * (lo + 0.05)) - 0.05
+      };
+    }
+
+    function medir() {
+      cuadro = 0;
+      if (!colores) return;
+      var sy = window.pageYOffset || 0;
+      paradas = colores.lista.map(function (p) {
+        var r = p.el.getBoundingClientRect();
+        return { pos: r.top + sy + p.def.f * r.height, color: p.color };
+      });
+      // La última parada debe poder alcanzarse con la página al final (la línea de referencia no pasa de aquí)
+      var alcance = document.documentElement.scrollHeight - window.innerHeight * (1 - LINEA_REFERENCIA) - 40;
+      var ultima = paradas[paradas.length - 1];
+      if (ultima.pos > alcance) ultima.pos = Math.max(alcance, paradas[paradas.length - 2].pos + 1);
+      for (var i = 1; i < paradas.length; i++) if (paradas[i].pos <= paradas[i - 1].pos) paradas[i].pos = paradas[i - 1].pos + 1;
+    }
+
+    function pintar() {
+      cuadro = 0;
+      var sy = window.pageYOffset || 0;
+      if (encabezado) {
+        var d = sy > UMBRAL_HEADER_PX;
+        if (d !== desplazado) {
+          desplazado = d;
+          encabezado.classList.toggle("is-desplazado", d);
+        }
+      }
+      if (!activo || !paradas) return;
+      var r = sy + window.innerHeight * LINEA_REFERENCIA;
+      var c;
+      if (r <= paradas[0].pos) c = paradas[0].color;
+      else if (r >= paradas[paradas.length - 1].pos) c = paradas[paradas.length - 1].color;
+      else {
+        var i = 1;
+        while (paradas[i].pos < r) i++;
+        var a = paradas[i - 1], b = paradas[i];
+        var t = (r - a.pos) / (b.pos - a.pos);
+        c = [0, 1, 2].map(function (k) { return Math.round(a.color[k] + (b.color[k] - a.color[k]) * t); });
+      }
+      raiz.style.setProperty("--fondo", "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")");
+      var nuevo = luminancia(c) > colores.cruce ? "claro" : "oscuro";
+      if (nuevo !== tono) {
+        tono = nuevo;
+        raiz.setAttribute("data-tono", tono);
+        raiz.style.setProperty("--texto", tono === "claro" ? colores.textoOscuro : colores.textoClaro);
+      }
+    }
+
+    function pedir() { if (!cuadro) cuadro = window.requestAnimationFrame(pintar); }
+    function remedir() { medir(); pedir(); }
+
+    function activar() {
+      if (activo) return;
+      colores = colores || cargarColores();
+      if (!colores) return;
+      activo = true;
+      tono = "";
+      medir();
+      raiz.setAttribute("data-fondo", "continuo");
+      pintar();
+    }
+    function desactivar() {
+      if (!activo) return;
+      activo = false;
+      raiz.removeAttribute("data-fondo");
+      raiz.removeAttribute("data-tono");
+      raiz.style.removeProperty("--fondo");
+      raiz.style.removeProperty("--texto");
+    }
+
+    window.addEventListener("scroll", pedir, { passive: true });
+    window.addEventListener("resize", remedir);
+    window.addEventListener("load", remedir);
+    // Las imágenes diferidas cambian la altura de la página: se vuelven a medir las paradas
+    if (window.ResizeObserver) new ResizeObserver(remedir).observe(document.body);
+
+    function alCambiarMovimiento() {
+      if (reducir && reducir.matches) desactivar();
+      else activar();
+    }
+    if (reducir && reducir.addEventListener) reducir.addEventListener("change", alCambiarMovimiento);
+    alCambiarMovimiento();
+    pintar();
+  }
+
+  /**
+   * Gesto de scroll del hero (specs/003, R8, D-26): con la mandíbula cerrada, tras unos segundos sin actividad, una rueda
+   * (ratón) o un dedo que desliza (táctil) invita a desplazar sobre el cráneo (.hero__efectos.is-gesto). Como mucho GESTO_MAX_CICLOS veces; la primera interacción de la persona
+   * (rueda, toque, tecla, clic) o la apertura lo descartan durante toda la visita. No se muestra con «reducir
+   * movimiento», en móvil apaisado bajo, con el hero fuera de pantalla ni con la pestaña oculta.
+   */
+  function iniciarGestoScroll() {
+    var hero = document.getElementById("inicio");
+    var efectos = hero && hero.querySelector(".hero__efectos");
+    if (!efectos || !window.matchMedia) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia(CONSULTA_APAISADO_BAJO).matches) return;
+    var progreso = 0;
+    var descartado = false;
+    var enPantalla = true;
+    var ciclos = 0;
+    var temporizador = 0;
+    var esperadoPresentacion = false;
+    var EVENTOS = ["wheel", "touchstart", "keydown", "pointerdown"];
+
+    function puede() {
+      return !descartado && progreso < 0.02 && enPantalla && !document.hidden && ciclos < GESTO_MAX_CICLOS &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+    function cancelar() {
+      window.clearTimeout(temporizador);
+      efectos.classList.remove("is-gesto");
+    }
+    function programar(ms) {
+      window.clearTimeout(temporizador);
+      temporizador = window.setTimeout(mostrar, ms);
+    }
+    function mostrar() {
+      // La pantalla de presentación tapa el hero: el gesto espera a que termine (si no, se gastaría detrás de ella)
+      if (document.documentElement.classList.contains("cargando")) { esperadoPresentacion = true; programar(300); return; }
+      if (esperadoPresentacion) { esperadoPresentacion = false; programar(GESTO_ESPERA_MS); return; }
+      if (!puede()) return;
+      ciclos++;
+      efectos.classList.add("is-gesto");
+      temporizador = window.setTimeout(function () {
+        efectos.classList.remove("is-gesto");
+        if (puede()) programar(GESTO_PAUSA_MS);
+      }, GESTO_DURACION_MS);
+    }
+    function descartar() {
+      if (descartado) return;
+      descartado = true;
+      cancelar();
+      EVENTOS.forEach(function (n) { window.removeEventListener(n, descartar, true); });
+    }
+
+    EVENTOS.forEach(function (n) { window.addEventListener(n, descartar, { capture: true, passive: true }); });
+    document.addEventListener("dentadura:apertura", function (e) {
+      progreso = e.detail ? e.detail.progreso : 0;
+      if (progreso >= 0.02) cancelar();
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) cancelar();
+      else if (puede()) programar(GESTO_ESPERA_MS);
+    });
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (entradas) {
+        enPantalla = entradas[entradas.length - 1].isIntersecting;
+        if (!enPantalla) cancelar();
+        else if (puede()) programar(GESTO_ESPERA_MS);
+      }).observe(hero);
+    }
+    programar(document.documentElement.classList.contains("cargando") ? 300 : GESTO_ESPERA_MS);
+  }
+
+  /**
+   * Menú desplegable del header en móvil y tableta (< 1024 px, D-24): el botón abre y cierra el <nav> de secciones.
+   * Se cierra con Escape (devolviendo el foco al botón), al elegir una sección, al pulsar fuera, al pasar a escritorio
+   * y al desplazar la página. Sin JavaScript el menú queda oculto y la barra fija inferior sigue dando acceso a «Llamar».
+   */
+  function iniciarMenuMovil() {
+    var encabezado = document.querySelector(".encabezado");
+    var boton = encabezado && encabezado.querySelector(".encabezado__menu-boton");
+    var nav = encabezado && encabezado.querySelector(".encabezado__nav");
+    if (!boton || !nav) return;
+    var escritorio = window.matchMedia ? window.matchMedia("(min-width: 1024px)") : null;
+    var origenScroll = 0;
+
+    function abierto() { return encabezado.classList.contains("is-abierto"); }
+    function fijar(abrir) {
+      encabezado.classList.toggle("is-abierto", abrir);
+      boton.setAttribute("aria-expanded", abrir ? "true" : "false");
+      boton.setAttribute("aria-label", abrir ? "Cerrar el menú de secciones" : "Abrir el menú de secciones");
+      origenScroll = window.pageYOffset || 0;
+    }
+
+    boton.addEventListener("click", function () { fijar(!abierto()); });
+    nav.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest("a")) fijar(false);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && abierto()) {
+        fijar(false);
+        boton.focus();
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (abierto() && !encabezado.contains(e.target)) fijar(false);
+    });
+    window.addEventListener("scroll", function () {
+      if (abierto() && Math.abs((window.pageYOffset || 0) - origenScroll) > 80) fijar(false);
+    }, { passive: true });
+    if (escritorio && escritorio.addEventListener) {
+      escritorio.addEventListener("change", function (e) { if (e.matches) fijar(false); });
+    }
+  }
+
+
+  /**
+   * Pantalla de presentación (specs/003, D-25; constitución v2.8.0, excepción del principio II). Tapa la página mientras se
+   * decide el modo del hero (el 3D tarda en cargar y, mientras, se vería el modo de imágenes). La clase «cargando» de <html>
+   * la pone el <head> (solo con JavaScript, sin «reducir movimiento»; también con ancla en la URL). Mientras dura:
+   * - la página es inerte (atributo inert: sin foco ni clics) y los gestos de scroll, teclas y clics se detienen en la fase de
+   *   captura, antes de que los vea el bloqueo de introducción del hero;
+   * - los cuatro pares de dientes entran en ≈ 1,6 s; cuando terminaron Y el hero ya sabe su modo (3D listo, o imágenes), los
+   *   dientes se cierran sobre el logo (--cierra) y la pantalla se desvanece (--sale);
+   * - si algo no responde, a los PRESENTACION_TOPE_MS se cierra igualmente.
+   * Al terminar quita la clase, el inert y los bloqueos, y borra el elemento.
+   */
+  function iniciarPresentacion() {
+    var raiz = document.documentElement;
+    var pantalla = document.getElementById("presentacion");
+    if (!pantalla || !raiz.classList.contains("cargando")) return;
+    var inertes = Array.prototype.slice.call(document.querySelectorAll(".salto-contenido, .encabezado, main, footer, .barra-fija, .whatsapp-flotante"));
+    var animacionLista = false;
+    var heroListo = raiz.dataset.hero !== "animado";
+    var cerrando = false;
+    var terminada = false;
+    var EVENTOS = ["wheel", "touchstart", "touchmove", "keydown", "click", "pointerdown", "mousedown"];
+
+    var TECLAS = [" ", "Spacebar", "Enter", "Tab", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"];
+    function detener(e) {
+      // Solo las teclas que mueven la página o activan controles; los atajos del navegador (F5, Ctrl+…) pasan
+      if (e.type === "keydown" && (e.ctrlKey || e.metaKey || e.altKey || TECLAS.indexOf(e.key) < 0)) return;
+      e.stopImmediatePropagation();
+      if (e.cancelable) e.preventDefault();
+    }
+    inertes.forEach(function (el) { el.setAttribute("inert", ""); });
+    EVENTOS.forEach(function (n) { window.addEventListener(n, detener, { capture: true, passive: false }); });
+
+    function terminar() {
+      if (terminada) return;
+      terminada = true;
+      EVENTOS.forEach(function (n) { window.removeEventListener(n, detener, true); });
+      inertes.forEach(function (el) { el.removeAttribute("inert"); });
+      raiz.classList.remove("cargando");
+      if (window.performance && performance.mark) performance.mark("presentacion-fin");   // para medir su duración (verificacion.md)
+      if (pantalla.parentNode) pantalla.parentNode.removeChild(pantalla);
+    }
+    function salir() {
+      pantalla.classList.add("presentacion--sale");
+      window.setTimeout(terminar, PRESENTACION_SALIDA_MS);
+    }
+    function cerrar() {
+      if (cerrando) return;
+      cerrando = true;
+      pantalla.classList.add("presentacion--cierra");
+      window.setTimeout(salir, PRESENTACION_CIERRE_MS);
+    }
+    function intentar() { if (animacionLista && heroListo) cerrar(); }
+
+    // Los tiempos cuentan desde que la animación arranca (logo y tipografía cargados: clase --lista, que pone el HTML)
+    var arrancada = false;
+    function arrancar() {
+      if (arrancada) return;
+      arrancada = true;
+      window.setTimeout(function () { animacionLista = true; intentar(); }, PRESENTACION_MIN_MS);
+      window.setTimeout(function () { animacionLista = true; heroListo = true; cerrar(); }, PRESENTACION_TOPE_MS);
+    }
+    if (pantalla.classList.contains("presentacion--lista")) arrancar();
+    else {
+      pantalla.addEventListener("presentacion:lista", arrancar);
+      window.setTimeout(arrancar, 1500);   // por si el script del HTML no llegó a avisar
+    }
+    // El hero está listo cuando el 3D termina de cargar (animado) o falla (estatico), o si pasa al modo de imágenes
+    document.addEventListener("dentadura:estado", function (e) {
+      if (e.detail && e.detail.estado && e.detail.estado !== "cargando") {
+        // el canvas se funde en ≈ 0,4 s: se deja un instante para que no se vea el paso
+        window.setTimeout(function () { heroListo = true; intentar(); }, 350);
+      }
+    });
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        if (raiz.dataset.hero !== "animado") { heroListo = true; intentar(); }
+      }).observe(raiz, { attributes: true, attributeFilter: ["data-hero"] });
+    }
+  }
+
   /* ---------- 4. Inicio ---------- */
+  iniciarPresentacion();
   document.addEventListener("DOMContentLoaded", function () {
     propagarDatosNegocio();
     iniciarDentadura();
+    iniciarFondoYEncabezado();
+    iniciarGestoScroll();
+    iniciarMenuMovil();
   });
 })();

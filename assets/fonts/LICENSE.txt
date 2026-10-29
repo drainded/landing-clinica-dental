@@ -191,3 +191,9 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+
+
+=================== PLAYFAIR DISPLAY ===================
+Playfair Display (playfair-display.woff2: fuente variable 400–700, subconjunto latin, descargada de Google Fonts el 2026-10-27).
+Copyright 2017 The Playfair Project Authors (https://github.com/clauseggers/Playfair-Display)
+Licencia: SIL Open Font License, Version 1.1 (mismo texto que el de Poppins, copiado arriba).

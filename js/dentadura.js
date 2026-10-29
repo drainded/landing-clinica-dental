@@ -36,8 +36,18 @@ const ABSORCION = 0.66;                        // densidad de la radiografía
 const DESVANECE = new Vector2(0.30, 1.15);     // la bóveda del cráneo se desvanece entre estas alturas (y del mundo)
 const INCLINA_Y = 0.25;                        // inclinación máxima hacia el cursor (rad)
 const INCLINA_X = 0.12;
-const SEGUNDOS_MEDICION_FPS = 3;
+const SEGUNDOS_MEDICION_FPS = 2;
+const CALENTAMIENTO_MS = 1000;                 // tras el primer cuadro no se mide (compilación de shaders, carga de texturas)
+const FPS_OBJETIVO = 45;                       // por debajo se baja la resolución un escalón; por debajo de umbralFps se degrada a imágenes
+const FPS_MAX = 60;                            // tope de cuadros por segundo: en pantallas de 120/144 Hz no se gasta el doble de GPU
 const DPR_MAX = { completo: 2, ligero: 1.5 };
+// Presupuesto de píxeles del lienzo: el fondo de velos es un shader por píxel, y en pantallas grandes o de alta densidad
+// (4–8 Mpx) satura GPUs integradas y navegadores sin buena aceleración. La relación de píxeles baja hasta caber.
+const PIXELES_MAX = { completo: 1.8e6, ligero: 1.0e6 };
+const CALIDAD_ESCALON = 0.75;                  // cada escalón de calidad multiplica la resolución por esto (como mucho 2 escalones)
+const CALIDAD_MIN = 0.55;
+// GPU emulada por software (SwiftShader, llvmpipe…): el 3D iría a pocos cuadros por segundo, se pasa a imágenes de entrada
+const GPU_POR_SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render/i;
 // Clic sobre el cráneo: solo cuenta si cae a menos de este radio de algún vértice del modelo ya proyectado
 // en pantalla (fracción del ancho de la figura, acotada en píxeles).
 const RADIO_CLIC = { fraccion: 0.045, minPx: 18, maxPx: 32 };
@@ -251,8 +261,21 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
     canvas.className = "hero__canvas";
     canvas.setAttribute("aria-hidden", "true");
     const renderer = new WebGLRenderer({ canvas, antialias: nivel === "completo", alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: captura });
-    let dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX[nivel] || 1.5);
-    renderer.setPixelRatio(dpr);
+    if (!captura) {
+      const gl = renderer.getContext();
+      const info = gl.getExtension("WEBGL_debug_renderer_info");
+      const gpu = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL) || "") : "";
+      if (GPU_POR_SOFTWARE.test(gpu)) throw new Error("GPU por software: " + gpu);
+    }
+    let calidad = 1;   // escalón de resolución (1 = máxima); baja si los fps no llegan al objetivo
+    // Relación de píxeles del lienzo: la del dispositivo, acotada por nivel, por el presupuesto de píxeles y por la calidad
+    function relacionPixeles(w, h) {
+      if (captura) return Math.min(window.devicePixelRatio || 1, DPR_MAX[nivel] || 1.5);
+      const dispositivo = Math.min(window.devicePixelRatio || 1, DPR_MAX[nivel] || 1.5);
+      const presupuesto = Math.sqrt((PIXELES_MAX[nivel] || 1.5e6) / Math.max(1, w * h));
+      return Math.max(0.5, Math.min(dispositivo, presupuesto) * calidad);
+    }
+    renderer.setPixelRatio(relacionPixeles(1280, 720));
     escenario.insertBefore(canvas, escenario.firstChild);
     limpiezas.push(() => {
       renderer.setAnimationLoop(null);
@@ -369,6 +392,7 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
       const f = figura.getBoundingClientRect();
       const w = Math.max(1, Math.round(e.width));
       const h = Math.max(1, Math.round(e.height));
+      renderer.setPixelRatio(relacionPixeles(w, h));
       renderer.setSize(w, h, false);
       camara.aspect = w / h;
       uniformsVelos.uAspect.value = w / h;
@@ -550,6 +574,8 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
     document.addEventListener("dentadura:apertura", alApertura);
     limpiezas.push(() => document.removeEventListener("dentadura:apertura", alApertura));
 
+    // En pantallas táctiles el modelo no se inclina hacia el dedo (solo los velos de fondo siguen al puntero)
+    const inclina = !captura && window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? 0 : 1;
     const ptr = { x: 0, y: 0, sx: 0, sy: 0, activo: false, influencia: 0, velocidad: 0 };
     function leerPuntero(e) {
       const r = escenario.getBoundingClientRect();
@@ -584,7 +610,12 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
     let medicion = { inicio: 0, cuadros: 0 };
     let intentosFps = 0;
 
+    let ultimoRender = 0;
+    let recalcular = false;   // hay que reajustar el lienzo (cambio de calidad): se hace al empezar el siguiente cuadro
     function cuadro(ahora) {
+      if (!captura && ahora - ultimoRender < 1000 / FPS_MAX - 1) return;   // tope de cuadros: el tiempo acumulado sigue en `ultimo`
+      ultimoRender = ahora;
+      if (recalcular) { recalcular = false; medir(); }   // antes de dibujar: así el cuadro que se presenta nunca sale vacío
       const dt = Math.min((ahora - ultimo) / 1000, 0.1);
       ultimo = ahora;
       const k = 1 - Math.exp(-dt * 9);
@@ -605,8 +636,8 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
       uniformsVelos.uInfluencia.value = ptr.influencia;
       uniformsVelos.uCursor.value.set(ptr.sx * 0.5 * uniformsVelos.uAspect.value, ptr.sy * 0.5);
 
-      pivote.rotation.y = MathUtils.lerp(pivote.rotation.y, ptr.sx * INCLINA_Y * ptr.influencia, k);
-      pivote.rotation.x = MathUtils.lerp(pivote.rotation.x, -ptr.sy * INCLINA_X * ptr.influencia, k);
+      pivote.rotation.y = MathUtils.lerp(pivote.rotation.y, ptr.sx * INCLINA_Y * ptr.influencia * inclina, k);
+      pivote.rotation.x = MathUtils.lerp(pivote.rotation.x, -ptr.sy * INCLINA_X * ptr.influencia * inclina, k);
 
       // Con la boca abierta la cámara apunta hacia la boca
       const c = caja.centro;
@@ -624,22 +655,21 @@ export async function iniciar({ hero, figura, nivel, rutaModelo, umbralFps = 24,
         canvas.classList.add("is-listo");
         figura.classList.add("is-3d");
         cambiarEstado("animado");
-        medicion = { inicio: ahora, cuadros: 0 };
-      } else if (medicion.inicio) {
+        medicion = { inicio: ahora + CALENTAMIENTO_MS, cuadros: 0 };
+      } else if (medicion.inicio && ahora >= medicion.inicio) {
         medicion.cuadros++;
         if (ahora - medicion.inicio >= SEGUNDOS_MEDICION_FPS * 1000) {
           const fps = medicion.cuadros / ((ahora - medicion.inicio) / 1000);
           medicion.inicio = 0;
-          if (fps < umbralFps) {
+          if (fps < FPS_OBJETIVO && calidad > CALIDAD_MIN) {
+            // Escalera de calidad: se baja la resolución un escalón y se vuelve a medir
             intentosFps++;
-            if (dpr > 1) {
-              dpr = 1;
-              renderer.setPixelRatio(1);
-              medir();
-              medicion = { inicio: ahora, cuadros: 0 };   // vuelve a medir con la resolución reducida
-            } else if (nivel === "ligero" && intentosFps > 1) {
-              degradar();
-            }
+            calidad = Math.max(CALIDAD_MIN, calidad * CALIDAD_ESCALON);
+            recalcular = true;
+            medicion = { inicio: ahora + 600, cuadros: 0 };
+          } else if (fps < umbralFps) {
+            // Ya en la resolución mínima y aun así no se llega al umbral: mejor las imágenes que un 3D a tirones
+            degradar();
           }
         }
       }
